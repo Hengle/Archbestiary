@@ -8,16 +8,64 @@ Dictionary<int, DatRow> grantedEffectPerLevelsMax;
 DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
 DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
 
-CreateMonsterPages();
+
+//foreach(string path in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.18.Sentinel\Metadata\Monsters", "*.ao", SearchOption.AllDirectories)) {
+//    Console.WriteLine(path + " - " + GetRigFromAO(path));
+//}
+
+
+
+//CreateMonsterPages();
+CreateMonsterList();
+
+void CreateMonsterList() {
+    StringBuilder html = new StringBuilder();
+
+    html.AppendLine("<body style=\"margin: 0px;\"><div style=\"width:50%; position:fixed; overflow-x:hidden; overflow-y:scroll; height:100%; display:grid;\"><table>");
+
+    HashSet<int> ignore = new HashSet<int>();
+    foreach (DatRow row in dats["SpectreOverrides.dat"]) {
+        ignore.Add(row["Spectre"].GetReference().RowIndex);
+    }
+
+    for (int monsterVarietyRow = 1; monsterVarietyRow < dats["MonsterVarieties.dat"].RowCount; monsterVarietyRow++) {
+        if (!ignore.Contains(monsterVarietyRow)) {
+
+            DatRow monsterVariety = dats["MonsterVarieties.dat"][monsterVarietyRow];
+            string monsterType = monsterVariety["MonsterTypesKey"].GetReference().GetReferencedRow()["Id"].GetString();
+            if (monsterType == "Daemon") continue;
+
+            string id = monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
+            string name = monsterVariety["Name"].GetString();
+            html.AppendLine($"<tr><td style=\"white-space:nowrap\"><a href=\"Monsters/{id.Replace('/', '_')}.html\" target=\"body\">{id}</a></td>");
+            html.AppendLine($"<td style=\"white-space:nowrap\"><a href=\"Monsters/{id.Replace('/', '_')}.html\" target=\"body\">{name}</a></td></tr>");
+        }
+    }
+
+    html.AppendLine("</table></div><div class=\"mt\" style=\"margin-left:50%;\"><iframe name=\"body\" src=\"Monsters/AtlasInvaders_BlackStarMonsters_BlackStarBoss.html\" height=\"100%\" width=\"100%\" style=\"border: 0px; background-color: #eeeeee;\"></iframe></div></body>");
+    File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiaryweb\index.html", html.ToString());
+}
 
 void CreateMonsterPages() {
+
+    Dictionary<int, DatReference> spectreParents = new Dictionary<int, DatReference>();
+    Dictionary<int, DatReference> spectreChildren = new Dictionary<int, DatReference>();
+
+
+    foreach (DatRow row in dats["SpectreOverrides.dat"]) {
+        DatReference parent = row["Monster"].GetReference();
+        DatReference child = row["Spectre"].GetReference();
+        spectreParents[child.RowIndex] = parent;
+        spectreChildren[parent.RowIndex] = child;
+    }
 
     grantedEffectPerLevelsMax = BuildEffectPerLevels(dats);
 
 
-    for (int i = 1; i < dats["MonsterVarieties.dat"].RowCount; i++) {
-        var monsterVariety = dats["MonsterVarieties.dat"][i];
-        DatRow monsterType = monsterVariety["MonsterTypesKey"].GetReference().GetReferencedRow();
+    for (int monsterVarietyRow = 1; monsterVarietyRow < dats["MonsterVarieties.dat"].RowCount; monsterVarietyRow++) {
+        var monsterVariety = dats["MonsterVarieties.dat"][monsterVarietyRow];
+        DatReference monsterTypeRef = monsterVariety["MonsterTypesKey"].GetReference();
+        DatRow monsterType = monsterTypeRef.GetReferencedRow();
 
         int fireRes = 0; int coldRes = 0; int lightningRes = 0; int chaosRes = 0;
         DatReference? resReference = monsterType["MonsterResistancesKey"].GetReference();
@@ -44,16 +92,38 @@ void CreateMonsterPages() {
         monsterID = monsterID.Replace("Metadata/Monsters/", "");
         string monsterName = monsterVariety["Name"].GetString();
 
+        //Console.WriteLine($"{monsterID}|{monsterName}|{monsterVariety["TEST"].GetPrimitive<bool>()}");
+        //continue;
+
+        //Console.WriteLine($"{i}\t{monsterID}\t{monsterName}\t{monsterTypeRef.RowIndex}\t{monsterType["Id"].GetString()}");
+        //continue;
 
         //Console.WriteLine(MakeLine( monsterType["Id"].GetString(), 
         //    lifeMult, ailmentMult, armourMult, evasionMult, esMult, fireRes, coldRes, lightningRes, chaosRes));
 
+        //<tr><td colspan=""4"">{ListReferenceArrayIds(monsterVariety["TagsKeys"].GetReferenceArray())}</td></tr>
+
+        string[] aos = monsterVariety["AOFiles"].GetStringArray();
+        string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(@"E:\Extracted\PathOfExile\3.18.Sentinel\" + aos[ao]);
+
+
         StringBuilder html = new StringBuilder();
 
-        html.Append($@"
+        if(spectreChildren.ContainsKey(monsterVarietyRow)) {
+            string spectre = spectreChildren[monsterVarietyRow].GetReferencedRow()["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
+            html.AppendLine($"<a href=\"{spectre.Replace('/', '_')}.html\" target=\"body\">Spectre: {spectre}</a>");
+        } else if(spectreParents.ContainsKey(monsterVarietyRow)) {
+            string parent = spectreParents[monsterVarietyRow].GetReferencedRow()["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
+            html.AppendLine($"<a href=\"{parent.Replace('/', '_')}.html\" target=\"body\">Base: {parent}</a>");
+        }
+
+        html.AppendLine($@"
     <table>
         <tr><td colspan=""4""><h4 style=""margin-bottom: 0px;"">{monsterName}</h4></td></tr>
         <tr><td colspan=""4"">{monsterID}</td></tr>
+        <tr><td colspan=""4"">{monsterType["Id"].GetString()}</td></tr>
+        <tr><td colspan=""4"">{ListStrings(aos)}</td></tr>
+        <tr><td colspan=""4"">{ListStrings(rigs)}</td></tr>
         <tr><td>Life Mult:</td><td>{lifeMult}</td><td>Ailment Threshold:</td><td>{ailmentMult}</td></tr>
         <tr><td>Armour Mult:</td><td>{armourMult}</td><td>Fire Resistance:</td><td>{fireRes}</td></tr>
         <tr><td>Evasion Mult:</td><td>{evasionMult}</td><td>Cold Resistance:</td><td>{coldRes}</td></tr>
@@ -69,40 +139,95 @@ void CreateMonsterPages() {
                 string grantedEffectName = grantedEffect["Id"].GetString(); string skillName = activeSkill["Id"].GetString();
                 DatRow grantedEffectPerLevel = grantedEffectPerLevelsMax[r.RowIndex];
 
-                html.Append("<br/><table>");
-                html.Append($"<tr><td><h4 style=\"margin-bottom: 0px;\">{grantedEffectName} ({r.RowIndex})</h4></td></tr>");
-                html.Append($"<tr><td>{skillName} ({rSkill.RowIndex})</td></tr>");
+                html.AppendLine("<br/><table>");
+                html.AppendLine($"<tr><td><h4 style=\"margin-bottom: 0px;\">{grantedEffectName} ({r.RowIndex})</h4></td></tr>");
                 string damageType = GetSkillDamageTypes(activeSkill);
-                if(damageType is not null) html.Append($"<tr><td>{damageType}</td></tr>");
-                html.Append("</table><br/>");
+                if(damageType is not null)
+                    html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex}) - {damageType}</td></tr>");
+                else
+                    html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex})</td></tr>");
+
+
+                float[] floatStatValues = new float[] {
+                    grantedEffectPerLevel["Stat1Float"].GetPrimitive<float>(),
+                    grantedEffectPerLevel["Stat2Float"].GetPrimitive<float>(),
+                    grantedEffectPerLevel["Stat3Float"].GetPrimitive<float>(),
+                    grantedEffectPerLevel["Stat4Float"].GetPrimitive<float>(),
+                    grantedEffectPerLevel["Stat5Float"].GetPrimitive<float>(),
+                    grantedEffectPerLevel["Stat6Float"].GetPrimitive<float>(),
+                    grantedEffectPerLevel["Stat7Float"].GetPrimitive<float>(),
+                    grantedEffectPerLevel["Stat8Float"].GetPrimitive<float>(),
+                    grantedEffectPerLevel["Stat9Float"].GetPrimitive<float>()
+                };
+
+                int[] intStatValues = new int[] {
+                    grantedEffectPerLevel["Stat1Value"].GetPrimitive<int>(),
+                    grantedEffectPerLevel["Stat2Value"].GetPrimitive<int>(),
+                    grantedEffectPerLevel["Stat3Value"].GetPrimitive<int>(),
+                    grantedEffectPerLevel["Stat4Value"].GetPrimitive<int>(),
+                    grantedEffectPerLevel["Stat5Value"].GetPrimitive<int>(),
+                    grantedEffectPerLevel["Stat6Value"].GetPrimitive<int>(),
+                    grantedEffectPerLevel["Stat7Value"].GetPrimitive<int>(),
+                    grantedEffectPerLevel["Stat8Value"].GetPrimitive<int>(),
+                    grantedEffectPerLevel["Stat9Value"].GetPrimitive<int>()
+                };
+
+                var grantedEffectStats = grantedEffectPerLevel["StatsKeys"].GetReferenceArray();
+                for(int gei = 0; gei < grantedEffectStats.Length; gei++) {
+                    html.AppendLine($"<tr><td>{grantedEffectStats[gei].GetReferencedRow()["Id"].GetString()} {intStatValues[gei]} {floatStatValues[gei]}</td></tr>");
+                }
+
+                foreach(DatReference staticStatRef in grantedEffectPerLevel["StatsKeys2"].GetReferenceArray()) {
+                    html.AppendLine($"<tr><td>{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>");
+                }
+                
+
+
+                html.AppendLine("</table><br/>");
 
                 //foreach()
             }
 
 
 
-        File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiaryweb\" + monsterID.Replace('/', '_') + ".html", html.ToString());
+        File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiaryweb\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", html.ToString());
 
-        //Console.WriteLine($"<a href=\"{monsterID.Replace('/', '_')}.html\" target=\"body\">{monsterID}</a>");
+        if (monsterVarietyRow % 100 == 0) Console.WriteLine(monsterVarietyRow);
+        //Console.WriteLine(monsterID);
 
     }
 }
 
+string GetRigFromAO(string path) {
+    //super hacky
+    foreach(string line in File.ReadAllLines(path)) {
+        if(line.Contains("metadata =")) {
+            return line.Substring(line.IndexOf('"')).Trim('"');
+        }
+    }
+    return "COULD NOT FIND RIG";
+}
 
+string ListReferenceArrayIds(DatReference[] refs, string column = "Id") {
+    StringBuilder s = new StringBuilder();
+    for (int i = 0; i < refs.Length; i++) s.Append(refs[i].GetReferencedRow()[column].GetString() + ", ");
+    if(s.Length > 0) s.Remove(s.Length - 2, 2);
+    return s.ToString();
+}
 
 string GetSkillDamageTypes(DatRow activeSkill) {
     HashSet<int> contextFlags = new HashSet<int>();
     foreach (DatReference contextFlagRef in activeSkill["ContextFlags"].GetReferenceArray()) contextFlags.Add(contextFlagRef.RowIndex);
     StringBuilder s = new StringBuilder();
 
-    if (contextFlags.Contains(2)) s.Append("Attack, ");
-    if (contextFlags.Contains(3)) s.Append("Spell, ");
-    if (contextFlags.Contains(4)) s.Append("Secondary, ");
+    if (contextFlags.Contains(2)) s.Append("Attack/");
+    if (contextFlags.Contains(3)) s.Append("Spell/");
+    if (contextFlags.Contains(4)) s.Append("Secondary/");
     if (!contextFlags.Contains(18) && contextFlags.Contains(16)) {
-        if (contextFlags.Contains(12)) s.Append("Spell Damage over Time, ");
-        else s.Append("Damage over Time, ");
+        if (contextFlags.Contains(12)) s.Append("Spell Damage over Time/");
+        else s.Append("Damage over Time/");
     }
-    if (s.Length > 0) { s.Remove(s.Length - 2, 2); return s.ToString(); }
+    if (s.Length > 0) { s.Remove(s.Length - 1, 1); return s.ToString(); }
     return null;
 }
 
@@ -114,7 +239,7 @@ void ListDatRowCounts() {
     }
 }
 
-string MakeLine(params object[] vals) {
+string ListStrings(params object[] vals) {
     StringBuilder s = new StringBuilder();
     for (int i = 0; i < vals.Length; i++) { s.Append(vals[i].ToString()); s.Append('\t'); }
     return s.ToString();
