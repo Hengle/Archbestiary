@@ -3,19 +3,22 @@ using PoeSharp.Filetypes.Dat;
 using PoeSharp.Filetypes.Dat.Specification;
 using System.Text;
 
+
+
 Dictionary<int, DatRow> grantedEffectPerLevelsMax;
 
 DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
 DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
 
 
+//Dictionary<int, RelatedMonsters> relatedMonsters;
+
 //foreach(string path in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.18.Sentinel\Metadata\Monsters", "*.ao", SearchOption.AllDirectories)) {
 //    Console.WriteLine(path + " - " + GetRigFromAO(path));
 //}
 
 
-
-//CreateMonsterPages();
+CreateMonsterPages();
 CreateMonsterList();
 
 void CreateMonsterList() {
@@ -48,15 +51,23 @@ void CreateMonsterList() {
 
 void CreateMonsterPages() {
 
+
+    //SPECTRE OVERRIDES
     Dictionary<int, DatReference> spectreParents = new Dictionary<int, DatReference>();
     Dictionary<int, DatReference> spectreChildren = new Dictionary<int, DatReference>();
-
 
     foreach (DatRow row in dats["SpectreOverrides.dat"]) {
         DatReference parent = row["Monster"].GetReference();
         DatReference child = row["Spectre"].GetReference();
         spectreParents[child.RowIndex] = parent;
         spectreChildren[parent.RowIndex] = child;
+    }
+
+    //SUMMONS
+    Dictionary<int, DatReference> summonMonsters = new Dictionary<int, DatReference>();
+    foreach(DatRow row in dats["SummonedSpecificMonsters.dat"]) {
+        DatReference r = row["MonsterVarietiesKey"].GetReference();
+        if (r is not null) summonMonsters[row["Id"].GetPrimitive<int>()] = r;
     }
 
     grantedEffectPerLevelsMax = BuildEffectPerLevels(dats);
@@ -133,22 +144,40 @@ void CreateMonsterPages() {
     ");
 
         foreach (DatReference r in monsterVariety["GrantedEffectsKeys"].GetReferenceArray()) if (r is not null) {
-                DatRow grantedEffect = r.GetReferencedRow();
-                DatReference rSkill = grantedEffect["ActiveSkill"].GetReference();
-                DatRow activeSkill = rSkill.GetReferencedRow();
-                string grantedEffectName = grantedEffect["Id"].GetString(); string skillName = activeSkill["Id"].GetString();
-                DatRow grantedEffectPerLevel = grantedEffectPerLevelsMax[r.RowIndex];
-
-                html.AppendLine("<br/><table>");
-                html.AppendLine($"<tr><td><h4 style=\"margin-bottom: 0px;\">{grantedEffectName} ({r.RowIndex})</h4></td></tr>");
-                string damageType = GetSkillDamageTypes(activeSkill);
-                if(damageType is not null)
-                    html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex}) - {damageType}</td></tr>");
-                else
-                    html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex})</td></tr>");
+            html.AppendLine(CreateGrantedEffectHtml(r.GetReferencedRow(), r.RowIndex));
+         }
 
 
-                float[] floatStatValues = new float[] {
+
+        File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiaryweb\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", html.ToString());
+
+        if (monsterVarietyRow % 100 == 0) Console.WriteLine(monsterVarietyRow);
+        //Console.WriteLine(monsterID);
+
+    }
+}
+
+string CreateGrantedEffectHtml(DatRow grantedEffect, int row) {
+    StringBuilder html = new StringBuilder();
+    DatReference rSkill = grantedEffect["ActiveSkill"].GetReference();
+    if (rSkill is null) {
+        Console.WriteLine(grantedEffect["Id"].GetString() + " Has no active skill");
+        return "";
+    }
+    DatRow activeSkill = rSkill.GetReferencedRow();
+    string grantedEffectName = grantedEffect["Id"].GetString(); string skillName = activeSkill["Id"].GetString();
+    DatRow grantedEffectPerLevel = grantedEffectPerLevelsMax[row];
+
+    html.AppendLine("<br/><table>");
+    html.AppendLine($"<tr><td><h4 style=\"margin-bottom: 0px;\">{grantedEffectName} ({row})</h4></td></tr>");
+    string damageType = GetSkillDamageTypes(activeSkill);
+    if (damageType is not null)
+        html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex}) - {damageType}</td></tr>");
+    else
+        html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex})</td></tr>");
+
+
+    float[] floatStatValues = new float[] {
                     grantedEffectPerLevel["Stat1Float"].GetPrimitive<float>(),
                     grantedEffectPerLevel["Stat2Float"].GetPrimitive<float>(),
                     grantedEffectPerLevel["Stat3Float"].GetPrimitive<float>(),
@@ -160,7 +189,7 @@ void CreateMonsterPages() {
                     grantedEffectPerLevel["Stat9Float"].GetPrimitive<float>()
                 };
 
-                int[] intStatValues = new int[] {
+    int[] intStatValues = new int[] {
                     grantedEffectPerLevel["Stat1Value"].GetPrimitive<int>(),
                     grantedEffectPerLevel["Stat2Value"].GetPrimitive<int>(),
                     grantedEffectPerLevel["Stat3Value"].GetPrimitive<int>(),
@@ -172,31 +201,52 @@ void CreateMonsterPages() {
                     grantedEffectPerLevel["Stat9Value"].GetPrimitive<int>()
                 };
 
-                var grantedEffectStats = grantedEffectPerLevel["StatsKeys"].GetReferenceArray();
-                for(int gei = 0; gei < grantedEffectStats.Length; gei++) {
-                    html.AppendLine($"<tr><td>{grantedEffectStats[gei].GetReferencedRow()["Id"].GetString()} {intStatValues[gei]} {floatStatValues[gei]}</td></tr>");
-                }
+    var grantedEffectStats = grantedEffectPerLevel["StatsKeys"].GetReferenceArray();
+    for (int gei = 0; gei < grantedEffectStats.Length; gei++) {
+        html.AppendLine($"<tr><td>{GetStatDescription(grantedEffectStats[gei].GetReferencedRow(), intStatValues[gei], floatStatValues[gei])}</td></tr>");
+    }
 
-                foreach(DatReference staticStatRef in grantedEffectPerLevel["StatsKeys2"].GetReferenceArray()) {
-                    html.AppendLine($"<tr><td>{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>");
-                }
-                
+    foreach (DatReference staticStatRef in grantedEffectPerLevel["StatsKeys2"].GetReferenceArray()) {
+        html.AppendLine($"<tr><td>{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>");
+    }
+    html.AppendLine("</table><br/>");
+    return html.ToString();
+}
 
+void DumpMonsterSkills() {
+    grantedEffectPerLevelsMax = BuildEffectPerLevels(dats);
 
-                html.AppendLine("</table><br/>");
-
-                //foreach()
-            }
-
-
-
-        File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiaryweb\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", html.ToString());
-
-        if (monsterVarietyRow % 100 == 0) Console.WriteLine(monsterVarietyRow);
-        //Console.WriteLine(monsterID);
-
+    using (TextWriter writer = new StreamWriter(File.Open(@"E:\Anna\Anna\Visual Studio\Archbestiaryweb\skillstest.html", FileMode.Create))) {
+        for (int i = 0; i < dats["GrantedEffects.dat"].RowCount; i++) {
+            DatRow grantedEffect = dats["GrantedEffects.dat"][i];
+            writer.WriteLine(CreateGrantedEffectHtml(grantedEffect, i));
+        }
     }
 }
+
+string GetStatDescription(DatRow stat, int intStatValue, float floatStatValue) {
+    string id = stat["Id"].GetString();
+    if(id == "alternate_minion") {
+        for(int summonRow = 0; summonRow < dats["SummonedSpecificMonsters.dat"].RowCount; summonRow++) {
+            DatRow row = dats["SummonedSpecificMonsters.dat"][summonRow];
+            int summonId = row["Id"].GetPrimitive<int>();
+
+            if (summonId == intStatValue) {
+                DatReference monsterRef = row["MonsterVarietiesKey"].GetReference();
+                if (monsterRef is null) return $"Summons UNKNOWN {intStatValue}";
+                DatRow monsterVariety = monsterRef.GetReferencedRow();
+                string cleanId = GetMonsterCleanId(monsterVariety);
+                return $"Summons <a href=\"{cleanId}.html\" target=\"body\">{monsterVariety["Name"].GetString()} ({cleanId})</a>";
+            }
+        }
+    }
+    return $"{id} {intStatValue} {floatStatValue}";
+}
+
+string GetMonsterCleanId(DatRow monsterVariety) {
+    return monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_').Replace('/', '_');
+}
+
 
 string GetRigFromAO(string path) {
     //super hacky
@@ -265,4 +315,45 @@ Dictionary<int, DatRow> BuildEffectPerLevels(DatFileIndex dats) {
     }
 
     return effectPerLevels;
+}
+
+//unfinished
+void ListDatStringIds() {
+    List<string[]> datIds = new List<string[]>();
+
+    foreach (DatFile dat in dats.Values) {
+        if (dat.RowCount < 126) continue;
+        if (!dat.Spec.ContainsKey("Id") || dat.Spec["Id"].Type != ColumnType.String) continue;
+        if (!dat.Name.EndsWith(".dat")) continue;
+
+        Console.WriteLine(dat.Name);
+
+        string[] ids = new string[128];
+        ids[0] = dat.Name;
+
+        for (int i = 9; i < 127; i++) {
+            DatRow row = dat[i];
+            try {
+                string id = row["Id"].GetString();
+                if (id is not null) ids[i] = id;
+            } catch { }
+
+        }
+        datIds.Add(ids);
+    }
+
+    for (int i = 0; i < 128; i++) {
+        Console.Write(i.ToString() + "|");
+        for (int x = 0; x < datIds.Count; x++) Console.Write(datIds[x][i] + "|");
+        Console.WriteLine();
+    }
+
+
+}
+
+
+
+class ChildMonsters {
+    DatReference spectre;
+    List<DatReference> summons;
 }
