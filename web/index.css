@@ -14,11 +14,11 @@ iframe {
     height: 100%;
     width: 100%;
     border: 0px; 
-    background-color: #eeeeee;
+    background-color: #444444;
 }
 
 .maindiv {
-    width:50%; 
+    width:40%; 
     position:fixed;
      overflow-x:hidden; 
      overflow-y:scroll; 
@@ -28,7 +28,7 @@ iframe {
 }
 
 .mt {
-    margin-left:50%;
+    margin-left:40%;
 }
 
 .linknormal {

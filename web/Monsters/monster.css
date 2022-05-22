@@ -1,3 +1,16 @@
 h4 {
     margin-bottom: 0px;
 }
+
+.block {
+    padding: 2px;
+    background-color: #cccccc;
+}
+
+.block > tbody {
+    background-color: #eeeeee;
+}
+
+.maincolumn {
+    vertical-align: top;
+}

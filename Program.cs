@@ -2,7 +2,7 @@
 using PoeSharp.Filetypes.Dat;
 using PoeSharp.Filetypes.Dat.Specification;
 using System.Text;
-
+using Archbestiary.Util;
 
 
 Dictionary<int, DatRow> grantedEffectPerLevelsMax;
@@ -24,8 +24,24 @@ foreach(DatRow row in dats["MonsterVarietiesArtVariations.dat"]) {
     Console.WriteLine(name + " | " + monsterName);
 }
 */
-CreateMonsterPages();
-CreateMonsterList();
+
+
+var monsterLocations = BuildMonsterLocations();
+for(int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
+    DatRow monsterVariety = dats["MonsterVarieties.dat"][i];
+    string id = monsterVariety["Id"].GetString();
+    string name = monsterVariety["Name"].GetString();
+    if (name.Length >= 35) name = name.Substring(0, 35);
+    Console.Write(id + "@" + name);
+    if (monsterLocations.ContainsKey(i))
+        foreach (string[] val in monsterLocations[i]) Console.Write($"@{val[0]}@{val[1]}@{val[2]}@{val[3]}");
+    Console.WriteLine();
+}
+
+
+
+//CreateMonsterPages();
+//CreateMonsterList();
 
 void CreateMonsterList() {
     StringBuilder html = new StringBuilder();
@@ -54,8 +70,9 @@ void CreateMonsterList() {
 
             string id = monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
             string name = monsterVariety["Name"].GetString();
-            html.AppendLine($"<tr><td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a></td>");
-            html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{name}</a></td></tr>");
+            if (name.Length >= 35) name = name.Substring(0, 35);
+            html.AppendLine($"<tr><td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{name}</a></td>");
+            html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a></td></tr>");
         }
     }
     html.Append("</table></details><details><summary>Summoned</summary><table>");
@@ -83,6 +100,8 @@ void CreateMonsterList() {
 
 void CreateMonsterPages() {
 
+
+    var monsterLocations = BuildMonsterLocations();
 
     //SPECTRE OVERRIDES
     Dictionary<int, DatReference> spectreParents = new Dictionary<int, DatReference>();
@@ -146,14 +165,47 @@ void CreateMonsterPages() {
 
         //<tr><td colspan=""4"">{ListReferenceArrayIds(monsterVariety["TagsKeys"].GetReferenceArray())}</td></tr>
 
-        string[] aos = monsterVariety["AOFiles"].GetStringArray();
+        string[] aos = monsterVariety["AOFiles"].GetStringArray(); 
         string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(@"E:\Extracted\PathOfExile\3.18.Sentinel\" + aos[ao]);
+        for (int ao = 0; ao < aos.Length; ao++) aos[ao] = aos[ao].Replace("Metadata/", "");
+        for (int rig = 0; rig < rigs.Length; rig++) rigs[rig] = rigs[rig].Replace("Art/Models/", "");
 
+        HTMLWriter html = new HTMLWriter(File.Open(@"E:\Anna\Anna\Visual Studio\Archbestiary\web\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", FileMode.Create));
+        html.WriteLine("<link rel=\"stylesheet\" href=\"monster.css\"></link>");
 
-        StringBuilder html = new StringBuilder();
+        html.WriteTable(
+            HTML.RowClass(null, "maincolumn",
+                HTML.Array(
+                    HTML.TableClass("block",
+                        HTML.Row($"<h4>{monsterName}</h4>"),
+                        HTML.Row(monsterType["Id"].GetString())
+                    ),
+                    HTML.Break(),
+                    HTML.TableClass("block",
+                        HTML.Row("Life Mult:", lifeMult, "Ailment Threshold:", ailmentMult),
+                        HTML.Row("Armour Mult:", armourMult, "Fire Resistance:", fireRes),
+                        HTML.Row("Evasion Mult:", evasionMult, "Cold Resistance:", coldRes),
+                        HTML.Row("Energy Shield:", esMult, "Lightning Resistance:", lightningRes),
+                        HTML.Row("Damage Mult:", damageMult, "Chaos Resistance:", chaosRes)
+                    ),
+                    CreateGrantedEffectTables(monsterVariety)
+                ),
+                HTML.Array(
+                    
+                    HTML.TableClass("block",
+                        HTML.Row("Id:", monsterID),
+                        HTML.Row("Obj:", ListStrings(aos)),
+                        HTML.Row("Rig:", ListStrings(rigs))
+                    ),
+                    HTML.Break(),
+                    HTML.TableClass("block", HTML.Array(monsterLocations.ContainsKey(monsterVarietyRow) ? monsterLocations[monsterVarietyRow].ToHTMLTable() : null))
+                )
+            )
+        );
+        html.Close();
 
-        html.AppendLine("<link rel=\"stylesheet\" href=\"monster.css\"></link>");
-
+        //RELATED MONSTERS MOVE LATER
+        /*
         if (spectreChildren.ContainsKey(monsterVarietyRow)) {
             string spectre = spectreChildren[monsterVarietyRow].GetReferencedRow()["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
             html.AppendLine($"<a href=\"{spectre.Replace('/', '_')}.html\" target=\"body\">Spectre: {spectre}</a>");
@@ -161,33 +213,60 @@ void CreateMonsterPages() {
             string parent = spectreParents[monsterVarietyRow].GetReferencedRow()["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
             html.AppendLine($"<a href=\"{parent.Replace('/', '_')}.html\" target=\"body\">Base: {parent}</a>");
         }
+        */
 
-        html.AppendLine($@"
-    <table>
-        <tr><td colspan=""2""><h4>{monsterName}</h4></td><td colspan=""2"">{monsterType["Id"].GetString()}</td></tr>
-        <tr><td colspan=""4"">{monsterID}</td></tr>
-        <tr><td colspan=""4"">{ListStrings(aos)}</td></tr>
-        <tr><td colspan=""4"">{ListStrings(rigs)}</td></tr>
-        <tr><td>Life Mult:</td><td>{lifeMult}</td><td>Ailment Threshold:</td><td>{ailmentMult}</td></tr>
-        <tr><td>Armour Mult:</td><td>{armourMult}</td><td>Fire Resistance:</td><td>{fireRes}</td></tr>
-        <tr><td>Evasion Mult:</td><td>{evasionMult}</td><td>Cold Resistance:</td><td>{coldRes}</td></tr>
-        <tr><td>Energy Shield Mult:</td><td>{esMult}</td><td>Lightning Resistance:</td><td>{lightningRes}</td></tr>
-        <tr><td>Damage Mult:</td><td>{damageMult}</td><td>Chaos Resistance:</td><td>{chaosRes}</td></tr>
-    </table>
-    ");
-
-        foreach (DatReference r in monsterVariety["GrantedEffectsKeys"].GetReferenceArray()) if (r is not null) {
-            html.AppendLine(CreateGrantedEffectHtml(r.GetReferencedRow(), r.RowIndex));
-         }
+        //GRANTEDEFFECTS MOVE LATER
+        //foreach (DatReference r in ) if (r is not null) {
+        //    html.AppendLine(CreateGrantedEffectHtml(r.GetReferencedRow(), r.RowIndex));
+        //}
 
 
 
-        File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiary\web\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", html.ToString());
 
         if (monsterVarietyRow % 100 == 0) Console.WriteLine(monsterVarietyRow);
         //Console.WriteLine(monsterID);
 
     }
+}
+
+Dictionary<int, List<string[]>> BuildMonsterLocations() {
+    Dictionary<int, List<string[]>> monsterLocations = new Dictionary<int, List<string[]>>();
+    foreach (DatRow area in dats["WorldAreas.dat"]) {
+        string areaName = area["Name"].GetString();
+        string areaID = area["Id"].GetString();
+        string act = $"Act {area["Act"].GetPrimitive<int>()}";
+        foreach (DatReference monster in area["Bosses_MonsterVarietiesKeys"].GetReferenceArray())
+            AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, areaID, "Boss");
+        foreach (DatReference monster in area["Monsters_MonsterVarietiesKeys"].GetReferenceArray()) 
+            AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, areaID, "Enemy");
+    }
+    foreach(DatRow row in dats["InvasionMonstersPerArea.dat"]) {
+        DatRow area = row["WorldAreasKey"].GetReference().GetReferencedRow();
+        string areaName = area["Name"].GetString();
+        string areaID = area["Id"].GetString();
+        string act =  $"Act {area["Act"].GetPrimitive<int>()}";
+        foreach (DatReference monster in row["MonsterVarietiesKeys1"].GetReferenceArray())
+            AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, areaID, "Invasion 1");
+        foreach (DatReference monster in row["MonsterVarietiesKeys2"].GetReferenceArray())
+            AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, areaID, "Invasion 2");
+    }
+
+    return monsterLocations;
+}
+
+void AddMonsterLocation(Dictionary<int, List<string[]>> monsterLocations, int monster, params string[] values) {
+    if (!monsterLocations.ContainsKey(monster)) monsterLocations[monster] = new List<string[]>();
+    monsterLocations[monster].Add(values);
+}
+
+string CreateGrantedEffectTables(DatRow monsterVariety) {
+    DatReference[] refs = monsterVariety["GrantedEffectsKeys"].GetReferenceArray();
+    if (refs is null) return "";
+    StringBuilder effectTables = new StringBuilder();
+    for (int i = 0; i < refs.Length; i++) {
+        effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex));
+    }
+    return effectTables.ToString();
 }
 
 string CreateGrantedEffectHtml(DatRow grantedEffect, int row) {
@@ -201,7 +280,7 @@ string CreateGrantedEffectHtml(DatRow grantedEffect, int row) {
     string grantedEffectName = grantedEffect["Id"].GetString(); string skillName = activeSkill["Id"].GetString();
     DatRow grantedEffectPerLevel = grantedEffectPerLevelsMax[row];
 
-    html.AppendLine("<br/><table>");
+    html.AppendLine("<br/><table class=\"block\">");
     html.AppendLine($"<tr><td><h4>{grantedEffectName} ({row})</h4></td></tr>");
     string damageType = GetSkillDamageTypes(activeSkill);
     if (damageType is not null)
@@ -242,7 +321,7 @@ string CreateGrantedEffectHtml(DatRow grantedEffect, int row) {
     foreach (DatReference staticStatRef in grantedEffectPerLevel["StatsKeys2"].GetReferenceArray()) {
         html.AppendLine($"<tr><td>{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>");
     }
-    html.AppendLine("</table><br/>");
+    html.Append("</table>");
     return html.ToString();
 }
 
@@ -269,7 +348,7 @@ string GetStatDescription(DatRow stat, int intStatValue, float floatStatValue) {
                 if (monsterRef is null) return $"Summons UNKNOWN {intStatValue}";
                 DatRow monsterVariety = monsterRef.GetReferencedRow();
                 string cleanId = GetMonsterCleanId(monsterVariety);
-                return $"Summons <a href=\"{cleanId}.html\" target=\"body\">{monsterVariety["Name"].GetString()} ({cleanId})</a>";
+                return $"Summons <a href=\"{cleanId}.html\" target=\"body\">{monsterVariety["Name"].GetString()}</a>";
             }
         }
     }
@@ -384,9 +463,9 @@ void ListDatStringIds() {
 
 }
 
-
-
-class ChildMonsters {
-    DatReference spectre;
-    List<DatReference> summons;
+void ListMonsterNameLengths() {
+    foreach (DatRow row in dats["MonsterVarieties.dat"]) {
+        string name = row["Name"].GetString();
+        Console.WriteLine($"{name.Length} {name}");
+    }
 }
