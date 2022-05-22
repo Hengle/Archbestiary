@@ -1,0 +1,47 @@
+body {
+    margin: 0px;
+}
+
+a {
+    text-decoration: none;
+}
+
+td {
+    white-space: nowrap;
+}
+
+iframe {
+    height: 100%;
+    width: 100%;
+    border: 0px; 
+    background-color: #eeeeee;
+}
+
+.maindiv {
+    width:50%; 
+    position:fixed;
+     overflow-x:hidden; 
+     overflow-y:scroll; 
+     height:100%; 
+     display:grid;
+     background-color: #181818;
+}
+
+.mt {
+    margin-left:50%;
+}
+
+.linknormal {
+    color: #909090;
+}
+
+.linkboss {
+    color: #af5f1c;
+}
+
+/*
+NORML: color: #c8c8c8;
+MAGIC: color: #8888ff;
+
+font-weight: bold
+*/

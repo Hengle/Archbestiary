@@ -78,7 +78,7 @@ void CreateMonsterList() {
 
     html.AppendLine("</table></details></div>");
     html.AppendLine("<div class=\"mt\"><iframe name=\"body\" src=\"Monsters/AtlasInvaders_BlackStarMonsters_BlackStarBoss.html\"></iframe></div></body>");
-    File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiaryweb\index.html", html.ToString());
+    File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiary\web\index.html", html.ToString());
 }
 
 void CreateMonsterPages() {
@@ -182,7 +182,7 @@ void CreateMonsterPages() {
 
 
 
-        File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiaryweb\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", html.ToString());
+        File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiary\web\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", html.ToString());
 
         if (monsterVarietyRow % 100 == 0) Console.WriteLine(monsterVarietyRow);
         //Console.WriteLine(monsterID);

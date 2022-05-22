@@ -1,2 +1,4 @@
 /bin/Debug/net6.0
 /obj
+*.html
+/.vs
