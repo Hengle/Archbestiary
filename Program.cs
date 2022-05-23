@@ -228,19 +228,20 @@ Dictionary<int, List<string[]>> BuildMonsterLocations() {
         DatRow pack = row["MonsterPacksKey"].GetReference().GetReferencedRow();
         foreach(DatReference areaRef in pack["WorldAreasKeys"].GetReferenceArray()) {
             DatRow area = areaRef.GetReferencedRow();
-            string packName = pack["Id"].GetString();
-            AddMonsterLocation2(monsterLocations, monster, area, "Pack", packName);
+            if (!AreaIsExtraSynthesis(area)) {
+                string packName = pack["Id"].GetString();
+                AddMonsterLocation2(monsterLocations, monster, area, "Pack", packName);
+            }
         }
     }
 
     foreach(DatRow row in dats["MonsterPacks.dat"]) {
         foreach (DatReference areaRef in row["WorldAreasKeys"].GetReferenceArray()) {
             DatRow area = areaRef.GetReferencedRow();
-            string packName = row["Id"].GetString();
-            HashSet<int> monsters = new HashSet<int>();
-            foreach (DatReference monster in row["BossMonster_MonsterVarietiesKeys"].GetReferenceArray()) {
-                if(!monsters.Contains(monster.RowIndex)) AddMonsterLocation2(monsterLocations, monster.RowIndex, area, "Pack Boss", packName);
-                monsters.Add(monster.RowIndex);
+            if (!AreaIsExtraSynthesis(area)) {
+                string packName = row["Id"].GetString();
+                foreach (DatReference monster in row["BossMonster_MonsterVarietiesKeys"].GetReferenceArray()) 
+                    AddMonsterLocation2(monsterLocations, monster.RowIndex, area, "Pack Boss", packName);
             }
         }
     }
@@ -259,6 +260,13 @@ Dictionary<int, List<string[]>> BuildMonsterLocations() {
 
 
     return monsterLocations;
+}
+
+bool AreaIsExtraSynthesis(DatRow area) {
+    string id = area["Id"].GetString();
+    if (id.StartsWith("Synthesis_Single") && id.Length > "Synthesis_Single".Length) return true;
+    else if (id.StartsWith("Synthesis_Main") && id.Length > "Synthesis_Main".Length) return true;
+    return false;
 }
 
 void AddMonsterLocation(Dictionary<int, List<string[]>> monsterLocations, int monster, params string[] values) {
