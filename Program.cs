@@ -302,6 +302,40 @@ Dictionary<int, HashSet<(int Monster, string Type)>> BuildMonsterRelations() {
         }
     }
 
+    //summons (god this is annoying)
+    Dictionary<int, int> summonedSpecificMonstersIds = new Dictionary<int, int>();
+    foreach(DatRow row in dats["SummonedSpecificMonsters.dat"]) {
+        DatReference monsterRef = row["MonsterVarietiesKey"].GetReference();
+        if (monsterRef is null) summonedSpecificMonstersIds[row["Id"].GetPrimitive<int>()] = 0;
+        else summonedSpecificMonstersIds[row["Id"].GetPrimitive<int>()] = monsterRef.RowIndex;
+    }
+
+    var perLevels = BuildEffectPerLevels(dats);
+    for (int varietyRow = 0; varietyRow < dats["MonsterVarieties.dat"].RowCount; varietyRow++) {
+        DatRow variety = dats["MonsterVarieties.dat"][varietyRow];
+        foreach(DatReference effectRef in variety["GrantedEffectsKeys"].GetReferenceArray()) {
+            DatRow perLevel = perLevels[effectRef.RowIndex];
+            int[] intStatValues = new int[] {
+                    perLevel["Stat1Value"].GetPrimitive<int>(),
+                    perLevel["Stat2Value"].GetPrimitive<int>(),
+                    perLevel["Stat3Value"].GetPrimitive<int>(),
+                    perLevel["Stat4Value"].GetPrimitive<int>(),
+                    perLevel["Stat5Value"].GetPrimitive<int>(),
+                    perLevel["Stat6Value"].GetPrimitive<int>(),
+                    perLevel["Stat7Value"].GetPrimitive<int>(),
+                    perLevel["Stat8Value"].GetPrimitive<int>(),
+                    perLevel["Stat9Value"].GetPrimitive<int>()
+             };
+            var statRefs = perLevel["StatsKeys"].GetReferenceArray();
+            for(int iStat = 0; iStat < statRefs.Length; iStat++) {
+                if (statRefs[iStat].GetReferencedRow()["Id"] == "alternate_minion") {
+                    AddMonsterRelation(monsterRelations, varietyRow, summonedSpecificMonstersIds[intStatValues[iStat]], "Summoned by", "Summons");
+                }
+            }
+
+        }
+    }
+
     return monsterRelations;
 }
 
@@ -544,13 +578,15 @@ void ListMonsterLocations() {
     for (int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
         DatRow monsterVariety = dats["MonsterVarieties.dat"][i];
 
-        DatRow monsterType = monsterVariety["MonsterTypesKey"].GetReference().GetReferencedRow();
-        if (monsterType["IsSummoned"].GetPrimitive<bool>()) continue;
+        //DatRow monsterType = monsterVariety["MonsterTypesKey"].GetReference().GetReferencedRow();
+        //if (monsterType["IsSummoned"].GetPrimitive<bool>()) continue;
 
         string id = monsterVariety["Id"].GetString();
         string name = monsterVariety["Name"].GetString();
         if (name.Length >= 35) name = name.Substring(0, 35);
         Console.Write(id + "@" + name);
+
+        
         if (monsterLocations.ContainsKey(i)) {
             foreach (var location in monsterLocations[i]) {
                 Console.Write("@" + location[0]);
@@ -558,9 +594,10 @@ void ListMonsterLocations() {
                     Console.Write(" - " + location[v]);
             }
         }
+        
         if (monsterRelations.ContainsKey(i)) 
             foreach(var tuple in monsterRelations[i]) {
-                if (tuple.Type != "Base") continue;
+                if (tuple.Type != "Base" && tuple.Type != "Summoned by") continue;
                 DatRow monster = dats["MonsterVarieties.dat"][tuple.Monster];
                 Console.Write($"@{tuple.Type} - {GetMonsterCleanId(monster, false)} ({monster["Name"].GetString()})");
             }
