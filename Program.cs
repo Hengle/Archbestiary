@@ -26,8 +26,8 @@ foreach(DatRow row in dats["MonsterVarietiesArtVariations.dat"]) {
 */
 
 
-
-
+//ListMonsterLocations();
+//return;
 
 CreateMonsterPages();
 CreateMonsterList();
@@ -195,57 +195,31 @@ void CreateMonsterPages() {
                     HTML.Break(),
                     CreateMonsterRelationTable(monsterRelations, monsterVarietyRow),
                     HTML.Break(),
-                    HTML.TableClass("block", HTML.Array(monsterLocations.ContainsKey(monsterVarietyRow) ? monsterLocations[monsterVarietyRow].ToHTMLTable() : null))
+                    HTML.TableClass("block", HTML.Array(monsterLocations.ContainsKey(monsterVarietyRow) ? monsterLocations[monsterVarietyRow].ToHTMLTableFixedColumns(4) : null))
                 )
             )
         );
         html.Close();
 
-        //RELATED MONSTERS MOVE LATER
-        /*
-        if (spectreChildren.ContainsKey(monsterVarietyRow)) {
-            string spectre = spectreChildren[monsterVarietyRow].GetReferencedRow()["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
-            html.AppendLine($"<a href=\"{spectre.Replace('/', '_')}.html\" target=\"body\">Spectre: {spectre}</a>");
-        } else if(spectreParents.ContainsKey(monsterVarietyRow)) {
-            string parent = spectreParents[monsterVarietyRow].GetReferencedRow()["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
-            html.AppendLine($"<a href=\"{parent.Replace('/', '_')}.html\" target=\"body\">Base: {parent}</a>");
-        }
-        */
-
-        //GRANTEDEFFECTS MOVE LATER
-        //foreach (DatReference r in ) if (r is not null) {
-        //    html.AppendLine(CreateGrantedEffectHtml(r.GetReferencedRow(), r.RowIndex));
-        //}
-
-
-
 
         if (monsterVarietyRow % 100 == 0) Console.WriteLine(monsterVarietyRow);
-        //Console.WriteLine(monsterID);
-
     }
 }
 
 Dictionary<int, List<string[]>> BuildMonsterLocations() {
     Dictionary<int, List<string[]>> monsterLocations = new Dictionary<int, List<string[]>>();
     foreach (DatRow area in dats["WorldAreas.dat"]) {
-        string areaName = area["Name"].GetString();
-        string areaID = area["Id"].GetString();
-        string act = $"Act {area["Act"].GetPrimitive<int>()}";
         foreach (DatReference monster in area["Bosses_MonsterVarietiesKeys"].GetReferenceArray())
-            AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, areaID, "Boss");
+            AddMonsterLocation2(monsterLocations, monster.RowIndex, area, "Boss");
         foreach (DatReference monster in area["Monsters_MonsterVarietiesKeys"].GetReferenceArray()) 
-            AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, areaID, "Enemy");
+            AddMonsterLocation2(monsterLocations, monster.RowIndex, area, "Enemy");
     }
     foreach(DatRow row in dats["InvasionMonstersPerArea.dat"]) {
         DatRow area = row["WorldAreasKey"].GetReference().GetReferencedRow();
-        string areaName = area["Name"].GetString();
-        string areaID = area["Id"].GetString();
-        string act =  $"Act {area["Act"].GetPrimitive<int>()}";
         foreach (DatReference monster in row["MonsterVarietiesKeys1"].GetReferenceArray())
-            AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, areaID, "Invasion 1");
+            AddMonsterLocation2(monsterLocations, monster.RowIndex, area, "Invasion 1");
         foreach (DatReference monster in row["MonsterVarietiesKeys2"].GetReferenceArray())
-            AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, areaID, "Invasion 2");
+            AddMonsterLocation2(monsterLocations, monster.RowIndex, area, "Invasion 2");
     }
 
 
@@ -255,10 +229,7 @@ Dictionary<int, List<string[]>> BuildMonsterLocations() {
         foreach(DatReference areaRef in pack["WorldAreasKeys"].GetReferenceArray()) {
             DatRow area = areaRef.GetReferencedRow();
             string packName = pack["Id"].GetString();
-            string areaName = area["Name"].GetString();
-            string areaID = area["Id"].GetString();
-            string act = $"Act {area["Act"].GetPrimitive<int>()}";
-            AddMonsterLocation(monsterLocations, monster, act, areaName, packName, "Pack");
+            AddMonsterLocation2(monsterLocations, monster, area, "Pack", packName);
         }
     }
 
@@ -266,17 +237,44 @@ Dictionary<int, List<string[]>> BuildMonsterLocations() {
         foreach (DatReference areaRef in row["WorldAreasKeys"].GetReferenceArray()) {
             DatRow area = areaRef.GetReferencedRow();
             string packName = row["Id"].GetString();
-            string areaName = area["Name"].GetString();
-            string areaID = area["Id"].GetString();
-            string act = $"Act {area["Act"].GetPrimitive<int>()}";
             foreach (DatReference monster in row["BossMonster_MonsterVarietiesKeys"].GetReferenceArray()) {
-                AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, packName, "Pack Boss");
+                AddMonsterLocation2(monsterLocations, monster.RowIndex, area, "Pack Boss", packName);
             }
         }
     }
 
+    Dictionary<int, HashSet<string>> monsterSpawners = new Dictionary<int, HashSet<string>>();
+    foreach(DatRow row in dats["TableMonsterSpawners.dat"]) {
+        string id = row["Metadata"].GetString().Replace("Metadata/", "");
+        foreach(DatReference monsterRef in row["MonsterVarieties"].GetReferenceArray()) {
+            if (!monsterSpawners.ContainsKey(monsterRef.RowIndex)) monsterSpawners[monsterRef.RowIndex] = new HashSet<string>();
+            monsterSpawners[monsterRef.RowIndex].Add(id);
+        }
+    }
+    foreach(int monster in monsterSpawners.Keys)
+        foreach (string spawner in monsterSpawners[monster])
+            AddMonsterLocation(monsterLocations, monster, "Spawner", spawner);
+
+
     return monsterLocations;
 }
+
+void AddMonsterLocation(Dictionary<int, List<string[]>> monsterLocations, int monster, params string[] values) {
+    if (!monsterLocations.ContainsKey(monster)) monsterLocations[monster] = new List<string[]>();
+    monsterLocations[monster].Add(values);
+}
+
+void AddMonsterLocation2(Dictionary<int, List<string[]>> monsterLocations, int monster, DatRow area, string type, string idReplace = null) {
+    string act = $"Act {area["Act"].GetPrimitive<int>()}";
+    string areaName = area["Name"].GetString();
+    string areaID = idReplace is null ? area["Id"].GetString() : idReplace;
+
+    if (!monsterLocations.ContainsKey(monster)) monsterLocations[monster] = new List<string[]>();
+    if (areaName == "NULL")  monsterLocations[monster].Add(new string[] { type, areaID });
+    else monsterLocations[monster].Add(new string[] {type, act, areaName, areaID});
+}
+
+
 
 Dictionary<int, HashSet<(int Monster, string Type)>> BuildMonsterRelations() {
     var monsterRelations = new Dictionary<int, HashSet<(int Monster, string Type)>>();
@@ -317,10 +315,6 @@ string CreateMonsterRelationTable(Dictionary<int, HashSet<(int Monster, string T
     return HTML.TableClass("block", relations.ToArray());
 }
 
-void AddMonsterLocation(Dictionary<int, List<string[]>> monsterLocations, int monster, params string[] values) {
-    if (!monsterLocations.ContainsKey(monster)) monsterLocations[monster] = new List<string[]>();
-    monsterLocations[monster].Add(values);
-}
 
 string CreateGrantedEffectTables(DatRow monsterVariety) {
     DatReference[] refs = monsterVariety["GrantedEffectsKeys"].GetReferenceArray();
@@ -536,6 +530,7 @@ void ListMonsterNameLengths() {
 
 void ListMonsterLocations() {
     var monsterLocations = BuildMonsterLocations();
+    var monsterRelations = BuildMonsterRelations();
     for (int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
         DatRow monsterVariety = dats["MonsterVarieties.dat"][i];
 
@@ -546,8 +541,19 @@ void ListMonsterLocations() {
         string name = monsterVariety["Name"].GetString();
         if (name.Length >= 35) name = name.Substring(0, 35);
         Console.Write(id + "@" + name);
-        if (monsterLocations.ContainsKey(i))
-            foreach (string[] val in monsterLocations[i]) Console.Write($"@{val[0]} - {val[1]} - {val[2]} - {val[3]}");
+        if (monsterLocations.ContainsKey(i)) {
+            foreach (var location in monsterLocations[i]) {
+                Console.Write("@" + location[0]);
+                for (int v = 1; v < location.Length; v++)
+                    Console.Write(" - " + location[v]);
+            }
+        }
+        if (monsterRelations.ContainsKey(i)) 
+            foreach(var tuple in monsterRelations[i]) {
+                if (tuple.Type != "Base") continue;
+                DatRow monster = dats["MonsterVarieties.dat"][tuple.Monster];
+                Console.Write($"@{tuple.Type} - {GetMonsterCleanId(monster, false)} ({monster["Name"].GetString()})");
+            }
         Console.WriteLine();
     }
 }

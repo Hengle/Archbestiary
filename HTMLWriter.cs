@@ -65,6 +65,20 @@ namespace Archbestiary.Util {
             return b.ToString();
         }
 
+        //doesn't account for more cells than listed columns
+        public static string RowFixedColumns(int columns, params object[] cells) {
+            if (cells is null) return "";
+            StringBuilder b = new StringBuilder();
+            b.Append("<tr>");
+            for (int i = 0; i < cells.Length - 1; i++) if (cells[i] is not null) b.Append("<td>" + cells[i].ToString() + "</td>");
+            if(columns > cells.Length) b.Append($"<td colspan=\"{columns - cells.Length + 1}\">{cells[cells.Length - 1].ToString()}</td>");
+            else b.Append("<td>" + cells[cells.Length - 1].ToString() + "</td>");
+            b.Append("</tr>");
+            return b.ToString();
+        }
+
+
+
         public static string RowList(params object?[] rows) {
             if (rows is null) return "";
             StringBuilder b = new StringBuilder();
@@ -96,6 +110,14 @@ namespace Archbestiary.Util {
             string[] rows = new string[list.Count];
             for(int i = 0; i < rows.Length; i++) {
                 rows[i] = HTML.Row(list[i]);
+            }
+            return rows;
+        }
+
+        public static string[] ToHTMLTableFixedColumns(this List<string[]> list, int columns) {
+            string[] rows = new string[list.Count];
+            for (int i = 0; i < rows.Length; i++) {
+                rows[i] = HTML.RowFixedColumns(columns, list[i]);
             }
             return rows;
         }
