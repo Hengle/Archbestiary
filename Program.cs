@@ -237,8 +237,10 @@ Dictionary<int, List<string[]>> BuildMonsterLocations() {
         foreach (DatReference areaRef in row["WorldAreasKeys"].GetReferenceArray()) {
             DatRow area = areaRef.GetReferencedRow();
             string packName = row["Id"].GetString();
+            HashSet<int> monsters = new HashSet<int>();
             foreach (DatReference monster in row["BossMonster_MonsterVarietiesKeys"].GetReferenceArray()) {
-                AddMonsterLocation2(monsterLocations, monster.RowIndex, area, "Pack Boss", packName);
+                if(!monsters.Contains(monster.RowIndex)) AddMonsterLocation2(monsterLocations, monster.RowIndex, area, "Pack Boss", packName);
+                monsters.Add(monster.RowIndex);
             }
         }
     }
