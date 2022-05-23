@@ -26,22 +26,11 @@ foreach(DatRow row in dats["MonsterVarietiesArtVariations.dat"]) {
 */
 
 
-var monsterLocations = BuildMonsterLocations();
-for(int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
-    DatRow monsterVariety = dats["MonsterVarieties.dat"][i];
-    string id = monsterVariety["Id"].GetString();
-    string name = monsterVariety["Name"].GetString();
-    if (name.Length >= 35) name = name.Substring(0, 35);
-    Console.Write(id + "@" + name);
-    if (monsterLocations.ContainsKey(i))
-        foreach (string[] val in monsterLocations[i]) Console.Write($"@{val[0]}@{val[1]}@{val[2]}@{val[3]}");
-    Console.WriteLine();
-}
 
 
 
-//CreateMonsterPages();
-//CreateMonsterList();
+CreateMonsterPages();
+CreateMonsterList();
 
 void CreateMonsterList() {
     StringBuilder html = new StringBuilder();
@@ -50,11 +39,16 @@ void CreateMonsterList() {
     html.AppendLine("<details open><summary>Regular</summary><table>");
 
     HashSet<int> ignore = new HashSet<int>();
-    foreach (DatRow row in dats["SpectreOverrides.dat"]) {
-        ignore.Add(row["Spectre"].GetReference().RowIndex);
-    }
 
-    HashSet<int> bosses = new HashSet<int>();
+    foreach (DatRow row in dats["SpectreOverrides.dat"]) 
+        ignore.Add(row["Spectre"].GetReference().RowIndex);
+    
+    foreach (DatRow row in dats["ElderMapBossOverride.dat"])
+        foreach (DatReference bossRef in row["MonsterVarietiesKeys"].GetReferenceArray())
+            ignore.Add(bossRef.RowIndex);
+        
+
+            HashSet<int> bosses = new HashSet<int>();
     foreach(DatRow row in dats["WorldAreas.dat"]) {
         foreach (DatReference boss in row["Bosses_MonsterVarietiesKeys"].GetReferenceArray()) bosses.Add(boss.RowIndex);
     }
@@ -102,6 +96,7 @@ void CreateMonsterPages() {
 
 
     var monsterLocations = BuildMonsterLocations();
+    var monsterRelations = BuildMonsterRelations();
 
     //SPECTRE OVERRIDES
     Dictionary<int, DatReference> spectreParents = new Dictionary<int, DatReference>();
@@ -198,6 +193,8 @@ void CreateMonsterPages() {
                         HTML.Row("Rig:", ListStrings(rigs))
                     ),
                     HTML.Break(),
+                    CreateMonsterRelationTable(monsterRelations, monsterVarietyRow),
+                    HTML.Break(),
                     HTML.TableClass("block", HTML.Array(monsterLocations.ContainsKey(monsterVarietyRow) ? monsterLocations[monsterVarietyRow].ToHTMLTable() : null))
                 )
             )
@@ -251,7 +248,73 @@ Dictionary<int, List<string[]>> BuildMonsterLocations() {
             AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, areaID, "Invasion 2");
     }
 
+
+    foreach(DatRow row in dats["MonsterPackEntries.dat"]) {
+        int monster = row["MonsterVarietiesKey"].GetReference().RowIndex;
+        DatRow pack = row["MonsterPacksKey"].GetReference().GetReferencedRow();
+        foreach(DatReference areaRef in pack["WorldAreasKeys"].GetReferenceArray()) {
+            DatRow area = areaRef.GetReferencedRow();
+            string packName = pack["Id"].GetString();
+            string areaName = area["Name"].GetString();
+            string areaID = area["Id"].GetString();
+            string act = $"Act {area["Act"].GetPrimitive<int>()}";
+            AddMonsterLocation(monsterLocations, monster, act, areaName, packName, "Pack");
+        }
+    }
+
+    foreach(DatRow row in dats["MonsterPacks.dat"]) {
+        foreach (DatReference areaRef in row["WorldAreasKeys"].GetReferenceArray()) {
+            DatRow area = areaRef.GetReferencedRow();
+            string packName = row["Id"].GetString();
+            string areaName = area["Name"].GetString();
+            string areaID = area["Id"].GetString();
+            string act = $"Act {area["Act"].GetPrimitive<int>()}";
+            foreach (DatReference monster in row["BossMonster_MonsterVarietiesKeys"].GetReferenceArray()) {
+                AddMonsterLocation(monsterLocations, monster.RowIndex, act, areaName, packName, "Pack Boss");
+            }
+        }
+    }
+
     return monsterLocations;
+}
+
+Dictionary<int, HashSet<(int Monster, string Type)>> BuildMonsterRelations() {
+    var monsterRelations = new Dictionary<int, HashSet<(int Monster, string Type)>>();
+    foreach (DatRow row in dats["SpectreOverrides.dat"]) {
+        AddMonsterRelation(monsterRelations, row["Monster"].GetReference().RowIndex, row["Spectre"].GetReference().RowIndex, "Base", "Spectre");
+    }
+
+    //Works bad for maps with multiple bosses
+    foreach(DatRow row in dats["ElderMapBossOverride.dat"]) {
+        DatRow area = row["WorldAreasKey"].GetReference().GetReferencedRow();
+        foreach(DatReference bossRef in area["Bosses_MonsterVarietiesKeys"].GetReferenceArray()) {
+            foreach(DatReference replacementRef in row["MonsterVarietiesKeys"].GetReferenceArray()) {
+                AddMonsterRelation(monsterRelations, bossRef.RowIndex, replacementRef.RowIndex, "Base", "Elder Boss Dummy");
+            }
+        }
+    }
+
+    return monsterRelations;
+}
+
+void AddMonsterRelation(Dictionary<int, HashSet<(int Monster, string Type)>> monsterRelations, int parentMonster, int childMonster, string parentType, string childType) {
+    if (!monsterRelations.ContainsKey(parentMonster)) monsterRelations[parentMonster] = new HashSet<(int Monster, string Type)>();
+    monsterRelations[parentMonster].Add((childMonster, childType));
+    if (!monsterRelations.ContainsKey(childMonster)) monsterRelations[childMonster] = new HashSet<(int Monster, string Type)>();
+    monsterRelations[childMonster].Add((parentMonster, parentType));
+}
+
+string CreateMonsterRelationTable(Dictionary<int, HashSet<(int Monster, string Type)>> monsterRelations, int monster) {
+    if (!monsterRelations.ContainsKey(monster)) return null;
+    List<string> relations = new List<string>();
+    foreach (var tuple in monsterRelations[monster]) {
+        DatRow other = dats["MonsterVarieties.dat"][tuple.Monster];
+        string link = GetMonsterCleanId(other) + ".html";
+        string name = HTML.Link(link, other["Name"].GetString());
+        string id = HTML.Link(link, GetMonsterCleanId(other, false));
+        relations.Add(HTML.Row(tuple.Type + ':', name, id));
+    }
+    return HTML.TableClass("block", relations.ToArray());
 }
 
 void AddMonsterLocation(Dictionary<int, List<string[]>> monsterLocations, int monster, params string[] values) {
@@ -355,8 +418,9 @@ string GetStatDescription(DatRow stat, int intStatValue, float floatStatValue) {
     return $"{id} {intStatValue} {floatStatValue}";
 }
 
-string GetMonsterCleanId(DatRow monsterVariety) {
-    return monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_').Replace('/', '_');
+string GetMonsterCleanId(DatRow monsterVariety, bool replaceSlashes = true) {
+    if(replaceSlashes) return monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_').Replace('/', '_');
+    return monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
 }
 
 
@@ -467,5 +531,23 @@ void ListMonsterNameLengths() {
     foreach (DatRow row in dats["MonsterVarieties.dat"]) {
         string name = row["Name"].GetString();
         Console.WriteLine($"{name.Length} {name}");
+    }
+}
+
+void ListMonsterLocations() {
+    var monsterLocations = BuildMonsterLocations();
+    for (int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
+        DatRow monsterVariety = dats["MonsterVarieties.dat"][i];
+
+        DatRow monsterType = monsterVariety["MonsterTypesKey"].GetReference().GetReferencedRow();
+        if (monsterType["IsSummoned"].GetPrimitive<bool>()) continue;
+
+        string id = monsterVariety["Id"].GetString();
+        string name = monsterVariety["Name"].GetString();
+        if (name.Length >= 35) name = name.Substring(0, 35);
+        Console.Write(id + "@" + name);
+        if (monsterLocations.ContainsKey(i))
+            foreach (string[] val in monsterLocations[i]) Console.Write($"@{val[0]} - {val[1]} - {val[2]} - {val[3]}");
+        Console.WriteLine();
     }
 }

@@ -39,14 +39,16 @@ namespace Archbestiary.Util {
 
      public static class HTML {
         public static string Table(params object[] rows) {
+            if (rows is null || rows.Length == 0) return null;
             StringBuilder b = new StringBuilder();
             b.AppendLine("<table>");
-            for (int i = 0; i < rows.Length; i++) b.AppendLine(rows[i].ToString());
+            for (int i = 0; i < rows.Length; i++) if(rows[i] is not null) b.AppendLine(rows[i].ToString());
             b.AppendLine("</table>");
             return b.ToString();
         }
 
         public static string TableClass(string hClass, params object[] rows) {
+            if (rows is null || rows.Length == 0) return null;
             StringBuilder b = new StringBuilder();
             b.AppendLine($"<table class=\"{hClass}\">");
             for (int i = 0; i < rows.Length; i++) b.AppendLine(rows[i].ToString());
@@ -84,7 +86,7 @@ namespace Archbestiary.Util {
         public static string Array(params object[] objs) {
             if (objs is null) return "";
             StringBuilder b = new StringBuilder();
-            for (int i = 0; i < objs.Length; i++) b.AppendLine(objs[i].ToString());
+            for (int i = 0; i < objs.Length; i++) if(objs[i] is not null) b.AppendLine(objs[i].ToString());
             return b.ToString();
         }
 
@@ -97,5 +99,7 @@ namespace Archbestiary.Util {
             }
             return rows;
         }
+
+        public static string Link(string link, string content)  { return $"<a href=\"{link}\">{content}</a>"; }
     }
 }
