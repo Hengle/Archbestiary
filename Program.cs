@@ -3,34 +3,47 @@ using PoeSharp.Filetypes.Dat;
 using PoeSharp.Filetypes.Dat.Specification;
 using System.Text;
 using Archbestiary.Util;
-
+using PoeTerrain;
 
 Dictionary<int, DatRow> grantedEffectPerLevelsMax;
-
+Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
 DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
 DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
 
 
-//Dictionary<int, RelatedMonsters> relatedMonsters;
 
-//foreach(string path in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.18.Sentinel\Metadata\Monsters", "*.ao", SearchOption.AllDirectories)) {
-//    Console.WriteLine(path + " - " + GetRigFromAO(path));
-//}
-/*
-foreach(DatRow row in dats["MonsterVarietiesArtVariations.dat"]) {
-    string name = row["Id"].GetString();
-    DatReference monster = row["MonsterVarieties"].GetReferenceArray()[0];
-    string monsterName = monster.GetReferencedRow()["Id"].GetString();
-    Console.WriteLine(name + " | " + monsterName);
-}
-*/
-
-
-//ListMonsterLocations();
+//ListPacks();
 //return;
 
 CreateMonsterPages();
 CreateMonsterList();
+
+void ListPacks() {
+    Dictionary<string, List<string>> packs = new Dictionary<string, List<string>>();
+
+    foreach (DatRow row in dats["MonsterPacks.dat"]) {
+        string packName = row["Id"].GetString();
+        packs[packName] = new List<string>();
+        foreach (DatReference monsterRef in row["BossMonster_MonsterVarietiesKeys"].GetReferenceArray()) {
+            DatRow monster = monsterRef.GetReferencedRow();
+            packs[packName].Add($"{monster["Name"].GetString()}@{monster["Id"]}");
+        }
+    }
+    foreach (DatRow row in dats["MonsterPackEntries.dat"]) {
+        DatRow monster = row["MonsterVarietiesKey"].GetReference().GetReferencedRow();
+        DatRow pack = row["MonsterPacksKey"].GetReference().GetReferencedRow();
+        string packName = pack["Id"].GetString();
+        packs[packName].Add($"{monster["Name"].GetString()}@{monster["Id"]}");
+    }
+
+    foreach(string pack in packs.Keys) {
+        foreach(string monster in packs[pack]) {
+            Console.WriteLine(pack + "@" + monster);
+        }
+        Console.WriteLine();
+    }
+
+}
 
 void CreateMonsterList() {
     StringBuilder html = new StringBuilder();
@@ -275,10 +288,17 @@ void AddMonsterLocation(Dictionary<int, List<string[]>> monsterLocations, int mo
 }
 
 void AddMonsterLocation2(Dictionary<int, List<string[]>> monsterLocations, int monster, DatRow area, string type, string idReplace = null) {
+
+    //TEMP
+    string areaDesc = $"{area["Name"].GetString()}@@{area["Id"].GetString()}";
+    DatRow monsterRow = dats["MonsterVarieties.dat"][monster];
+    string monsterDesc = $"{monsterRow["Name"].GetString()}@{type}@{monsterRow["Id"].GetString()}";
+    if (!areaMonsters.ContainsKey(areaDesc)) areaMonsters[areaDesc] = new HashSet<string>();
+    areaMonsters[areaDesc].Add(monsterDesc);
+
     string act = $"Act {area["Act"].GetPrimitive<int>()}";
     string areaName = area["Name"].GetString();
     string areaID = idReplace is null ? area["Id"].GetString() : idReplace;
-
     if (!monsterLocations.ContainsKey(monster)) monsterLocations[monster] = new List<string[]>();
     if (areaName == "NULL")  monsterLocations[monster].Add(new string[] { type, areaID });
     else monsterLocations[monster].Add(new string[] {type, act, areaName, areaID});
@@ -472,6 +492,17 @@ string GetRigFromAO(string path) {
     return "COULD NOT FIND RIG";
 }
 
+string[] GetAttatchmentsFromAo(string path) {
+    //super hacky
+    List<string> attatchments = new List<string>();
+    foreach (string line in File.ReadAllLines(path)) {
+        if (line.Contains("attached_object =")) {
+            attatchments.Add(line.Substring(line.LastIndexOf(' ') + 1).Trim('"'));
+        }
+    }
+    return attatchments.ToArray();
+}
+
 string ListReferenceArrayIds(DatReference[] refs, string column = "Id") {
     StringBuilder s = new StringBuilder();
     for (int i = 0; i < refs.Length; i++) s.Append(refs[i].GetReferencedRow()[column].GetString() + ", ");
@@ -602,5 +633,70 @@ void ListMonsterLocations() {
                 Console.Write($"@{tuple.Type} - {GetMonsterCleanId(monster, false)} ({monster["Name"].GetString()})");
             }
         Console.WriteLine();
+    }
+}
+
+void WriteArmEntityNames(int num) {
+    using (TextWriter writer = new StreamWriter(File.Open($"entities{num}.txt", FileMode.Create))) {
+        int i = 0;
+        foreach (string path in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.18.Sentinel\Metadata\Terrain", "*.arm", SearchOption.AllDirectories)) {
+            Arm a = new Arm(path);
+            if (a.entityLines.Length <= num) continue;
+            foreach (string line in a.entityLines[num]) {
+                //if (line.Contains("\"\"")) continue;
+                writer.WriteLine($"{a.entityLines.Length} {path.Substring(48, path.Length - 48)} {line}");
+            }
+            i++;
+            if (i % 100 == 0) Console.WriteLine(i);
+        }
+    }
+}
+
+void ListAreaMonsters() {
+    BuildMonsterLocations();
+    foreach (string area in areaMonsters.Keys) {
+        Console.WriteLine(area);
+        foreach (string monster in areaMonsters[area]) {
+            Console.WriteLine(monster);
+        }
+        Console.WriteLine();
+    }
+    return;
+}
+
+void ListUsedAOs() {
+    HashSet<string> attatchments = new HashSet<string>();
+    foreach (string ao in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.18.Sentinel\Metadata\Monsters", "*.ao", SearchOption.AllDirectories)) {
+        foreach (string attachment in GetAttatchmentsFromAo(ao))
+            attatchments.Add(@"E:\Extracted\PathOfExile\3.18.Sentinel\" + attachment.Replace('/', '\\'));
+    }
+
+    HashSet<string> aos = new HashSet<string>();
+    Console.WriteLine(aos.Count);
+    foreach (DatRow monster in dats["MonsterVarieties.dat"]) {
+        foreach (string ao in monster["AOFiles"].GetStringArray()) {
+            aos.Add(@"E:\Extracted\PathOfExile\3.18.Sentinel\" + ao.Replace('/', '\\'));
+        }
+    }
+
+    foreach (string ao in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.18.Sentinel\Metadata\Monsters", "*.ao", SearchOption.AllDirectories)) {
+        if (aos.Contains(ao)) Console.WriteLine(ao + "|MONSTER");
+        else if (attatchments.Contains(ao)) Console.WriteLine(ao + "|ATTATCHMENT");
+        else Console.WriteLine(ao + "|UNUSED");
+    }
+
+}
+
+void ListMonsterRigs() {
+    for(int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
+        DatRow monster = dats["MonsterVarieties.dat"][i];
+        DatReference monsterType = monster["MonsterTypesKey"].GetReference();
+        string monsterTypeId = monsterType.GetReferencedRow()["Id"].GetString();
+        string monsterId = monster["Id"].GetString();
+
+        foreach (string ao in monster["AOFiles"].GetStringArray()) {
+            string rig = GetRigFromAO(Path.Combine(@"E:\Extracted\PathOfExile\3.18.Sentinel", ao));
+            Console.WriteLine($"{monsterType.RowIndex}@{monsterTypeId}@{i}@{monsterId}@{ao}@{rig}");
+        }
     }
 }
