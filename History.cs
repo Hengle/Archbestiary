@@ -25,4 +25,13 @@ class History {
         }
 
     }
+
+    public static void GGPKSize() {
+        foreach (string dir in Directory.EnumerateDirectories(@"F:\Extracted\PathOfExile")) {
+            string version = Path.GetFileName(dir);
+            if (!char.IsDigit(version[0])) continue;
+            FileInfo info = new FileInfo(Path.Combine(dir, "8855727/Content.ggpk"));
+            Console.WriteLine(String.Format("{0},{1:F2}", version, info.Length / 1024f / 1024f / 1024f));
+        }
+    }
 }

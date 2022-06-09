@@ -5,7 +5,7 @@ using System.Text;
 using Archbestiary.Util;
 using PoeTerrain;
 
-History.DatHistory(); return;
+History.GGPKSize(); return;
  
 Dictionary<int, DatRow> grantedEffectPerLevelsMax;
 Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
