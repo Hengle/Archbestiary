@@ -5,6 +5,8 @@ using System.Text;
 using Archbestiary.Util;
 using PoeTerrain;
 
+History.DatHistory(); return;
+ 
 Dictionary<int, DatRow> grantedEffectPerLevelsMax;
 Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
 DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
