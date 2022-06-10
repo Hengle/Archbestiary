@@ -9,14 +9,12 @@ using ImageMagick;
 
 
 
-//History.DatHistory(); return;
  
 Dictionary<int, DatRow> grantedEffectPerLevelsMax;
 Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
 DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.txt");
 DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
 
-ArmourSets(); return;
 
 void ArmourSets() {
     HashSet<string> storeArmour = new HashSet<string>();
@@ -32,7 +30,7 @@ void ArmourSets() {
         foreach(int slot in itemizedEffect["MicrotransactionSlots"].GetPrimitiveArray<int>()) {
             if(slot == 9) { //body
                 DatRow baseItem = itemizedEffect["BaseItemTypesKey"].GetReference().GetReferencedRow();
-                DatReference visualIdentityRef = itemizedEffect["ItemVisualIdentityKey1"].GetReference();
+                DatReference visualIdentityRef = baseItem["ItemVisualIdentity"].GetReference();
                 if(visualIdentityRef is null) Console.WriteLine(baseItem.GetName() + " - NULL");
                 else {
                     DatRow visualIdentity = visualIdentityRef.GetReferencedRow();
@@ -50,7 +48,7 @@ void ArmourSets() {
                         .Gravity(Gravity.Southwest)
                         .Text(2, 2, name));
                     montage.Add(bg);
-                    Console.WriteLine(baseItem.GetName());
+                    Console.WriteLine(baseItem.GetName() + " - " + visualIdentity["DDSFile"].GetString());
                     bg.Write($@"E:\Extracted\PathOfExile\ARMOURSETS\{setIndex}_{baseItem.GetName().Replace(' ', '_')}.png");
                     setIndex++;
                     //Console.WriteLine(baseItem.GetName() + " | " + visualIdentity["DDSFile"].GetString());
@@ -66,7 +64,7 @@ void ArmourSets() {
 //ListPacks();
 //return;
 
-CreateMonsterPages();
+//CreateMonsterPages();
 CreateMonsterList();
 
 void ListPacks() {
@@ -97,6 +95,9 @@ void ListPacks() {
 }
 
 void CreateMonsterList() {
+
+    Dictionary<string, string> monsterAdded = History.BuildMonsterVarietyHistory(true);
+
     StringBuilder html = new StringBuilder();
     html.AppendLine("<link rel=\"stylesheet\" href=\"index.css\"></link>");
     html.AppendLine("<body><div class=\"maindiv\">");
@@ -126,10 +127,14 @@ void CreateMonsterList() {
 
             string monsterClass = bosses.Contains(monsterVarietyRow) ? "linkboss" : "linknormal";
 
-            string id = monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
+            string id = monsterVariety["Id"].GetString().TrimEnd('_');
+            string added = monsterAdded.ContainsKey(id) ? monsterAdded[id] : "U";
+            id = id.Replace("Metadata/Monsters/", "");
+            
             string name = monsterVariety["Name"].GetString();
             if (name.Length >= 35) name = name.Substring(0, 35);
             html.AppendLine($"<tr><td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{name}</a></td>");
+            html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{added}</a></td>");
             html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a></td></tr>");
         }
     }
@@ -143,10 +148,17 @@ void CreateMonsterList() {
 
             string monsterClass = bosses.Contains(monsterVarietyRow) ? "linkboss" : "linknormal";
 
-            string id = monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
+
+
+            string id = monsterVariety["Id"].GetString().TrimEnd('_');
+            string added = monsterAdded.ContainsKey(id) ? monsterAdded[id] : "U";
+            id = id.Replace("Metadata/Monsters/", "");
+
             string name = monsterVariety["Name"].GetString();
-            html.AppendLine($"<tr><td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a></td>");
-            html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{name}</a></td></tr>");
+            if (name.Length >= 35) name = name.Substring(0, 35);
+            html.AppendLine($"<tr><td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{name}</a></td>");
+            html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{added}</a></td>");
+            html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a></td></tr>");
         }
     }
 

@@ -7,7 +7,7 @@ using PoeSharp.Filetypes.Dat.Specification;
 
 class History {
 
-    public static void MonsterVarietyHistory(bool hideVersionName = false) {
+    public static Dictionary<string, string> BuildMonsterVarietyHistory(bool hideVersionName = false) {
         Dictionary<string, int> monsterCounts = new Dictionary<string, int>();
         Dictionary<string, string> added = new Dictionary<string, string>();
         Dictionary<string, string> removed = new Dictionary<string, string>();
@@ -27,11 +27,14 @@ class History {
             }
             foreach (string removedMonster in prevMonsters) if (!removed.ContainsKey(removedMonster)) removed[removedMonster] = version;
         }
+        /*
         foreach (string monster in added.Keys) {
             if (removed.ContainsKey(monster)) Console.WriteLine($"{added[monster]}|{monster}|{removed[monster]}");
             else Console.WriteLine(added[monster] + "|" + monster);
         }
+        */
         foreach (string version in monsterCounts.Keys) Console.WriteLine(version + "|" + monsterCounts[version].ToString());
+        return added;
     }
 
     public static void DatHistory() {
