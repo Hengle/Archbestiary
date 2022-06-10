@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="11.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\PoeSharp\src\PoeSharp.Filetypes\PoeSharp.Filetypes.csproj" />
     <ProjectReference Include="..\PoeTerrain\PoeTerrain.csproj" />
   </ItemGroup>

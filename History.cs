@@ -7,7 +7,7 @@ using PoeSharp.Filetypes.Dat.Specification;
 
 class History {
 
-    public static void MonsterVarietyHistory(bool hideVersionName = true) {
+    public static void MonsterVarietyHistory(bool hideVersionName = false) {
         Dictionary<string, int> monsterCounts = new Dictionary<string, int>();
         Dictionary<string, string> added = new Dictionary<string, string>();
         Dictionary<string, string> removed = new Dictionary<string, string>();

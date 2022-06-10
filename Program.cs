@@ -4,15 +4,64 @@ using PoeSharp.Filetypes.Dat.Specification;
 using System.Text;
 using Archbestiary.Util;
 using PoeTerrain;
+using ImageMagick;
 
-History.MonsterVarietyHistory(); return;
+
+
+
+//History.DatHistory(); return;
  
 Dictionary<int, DatRow> grantedEffectPerLevelsMax;
 Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
-DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
+DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.txt");
 DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
 
+ArmourSets(); return;
 
+void ArmourSets() {
+    HashSet<string> storeArmour = new HashSet<string>();
+    foreach(string line in File.ReadAllLines(@"E:\Extracted\PathOfExile\3.18.Sentinel\storeArmour.txt")) {
+        if (line.EndsWith(" Body Armour")) storeArmour.Add(line.Substring(0, line.IndexOf(" Body Armour")));
+        else if (line.EndsWith(" Body")) storeArmour.Add(line.Substring(0, line.IndexOf(" Body")));
+        else storeArmour.Add(line);
+    }
+
+    MagickImageCollection montage = new MagickImageCollection();
+    int setIndex = 0;
+    foreach(DatRow itemizedEffect in dats["ItemisedVisualEffect.dat64"]) {
+        foreach(int slot in itemizedEffect["MicrotransactionSlots"].GetPrimitiveArray<int>()) {
+            if(slot == 9) { //body
+                DatRow baseItem = itemizedEffect["BaseItemTypesKey"].GetReference().GetReferencedRow();
+                DatReference visualIdentityRef = itemizedEffect["ItemVisualIdentityKey1"].GetReference();
+                if(visualIdentityRef is null) Console.WriteLine(baseItem.GetName() + " - NULL");
+                else {
+                    DatRow visualIdentity = visualIdentityRef.GetReferencedRow();
+                    string name = baseItem.GetName();
+                    if (name.EndsWith(" Body Armour")) name = name.Substring(0, name.IndexOf(" Body Armour"));
+                    else if (name.EndsWith(" Body")) name = name.Substring(0, name.IndexOf(" Body"));
+                    MagickColor bgColor = storeArmour.Contains(name) ? MagickColors.Black : MagickColors.DarkRed ;
+                    MagickImage bg = new MagickImage(bgColor, 160, 240);
+                    MagickImage image = new MagickImage(Path.Combine(@"F:\Extracted\PathOfExile\ZZZZZZZZZZZZZZZZZZ3.18.Sentinel", visualIdentity["DDSFile"].GetString()));
+                    if (image.Height > 240) image.Resize(new MagickGeometry() { Height = 240 });
+                    bg.Draw(new Drawables()
+                        .Gravity(Gravity.Center)
+                        .Composite(0, 0, CompositeOperator.Over, image)
+                        .FillColor(MagickColors.White)
+                        .Gravity(Gravity.Southwest)
+                        .Text(2, 2, name));
+                    montage.Add(bg);
+                    Console.WriteLine(baseItem.GetName());
+                    bg.Write($@"E:\Extracted\PathOfExile\ARMOURSETS\{setIndex}_{baseItem.GetName().Replace(' ', '_')}.png");
+                    setIndex++;
+                    //Console.WriteLine(baseItem.GetName() + " | " + visualIdentity["DDSFile"].GetString());
+                }
+            }
+        }
+    }
+    MagickImage combined = (MagickImage) montage.Montage(new MontageSettings() { BackgroundColor = MagickColors.Black, Geometry = new MagickGeometry(160, 240)});
+    Console.WriteLine($"{combined.Width}x{combined.Height}");
+    combined.Write(@"E:\Extracted\PathOfExile\Bodies.png");
+}
 
 //ListPacks();
 //return;
