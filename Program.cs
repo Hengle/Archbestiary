@@ -4,7 +4,6 @@ using PoeSharp.Filetypes.Dat.Specification;
 using System.Text;
 using Archbestiary.Util;
 using PoeTerrain;
-using ImageMagick;
 
 
 
@@ -12,9 +11,16 @@ using ImageMagick;
  
 Dictionary<int, DatRow> grantedEffectPerLevelsMax;
 Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
-DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.txt");
+DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
 DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
 
+/*
+for (int i = 0; i < dats["DivinationCardStashTabLayout.dat64"].RowCount; i++) {
+    DatRow row = dats["DivinationCardStashTabLayout.dat64"][i];
+    DatRow baseItem = row["BaseItemTypesKey"].GetReference().GetReferencedRow();
+    Console.WriteLine($"{i}|{baseItem.GetName()}");
+}
+return;
 
 void ArmourSets() {
     HashSet<string> storeArmour = new HashSet<string>();
@@ -60,12 +66,13 @@ void ArmourSets() {
     Console.WriteLine($"{combined.Width}x{combined.Height}");
     combined.Write(@"E:\Extracted\PathOfExile\Bodies.png");
 }
+*/
 
 //ListPacks();
 //return;
 
-//CreateMonsterPages();
-CreateMonsterList();
+CreateMonsterPages();
+//CreateMonsterList();
 
 void ListPacks() {
     Dictionary<string, List<string>> packs = new Dictionary<string, List<string>>();
@@ -259,6 +266,8 @@ void CreateMonsterPages() {
                         HTML.Row("Energy Shield:", esMult, "Lightning Resistance:", lightningRes),
                         HTML.Row("Damage Mult:", damageMult, "Chaos Resistance:", chaosRes)
                     ),
+                    HTML.Break(),
+                    HTML.TableClass("block", CreateMonsterModRows(monsterVariety)),
                     CreateGrantedEffectTables(monsterVariety)
                 ),
                 HTML.Array(
@@ -451,6 +460,15 @@ string CreateGrantedEffectTables(DatRow monsterVariety) {
         effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex));
     }
     return effectTables.ToString();
+}
+
+string[] CreateMonsterModRows(DatRow monster) {
+    DatReference[] refs = monster["ModsKeys"].GetReferenceArray();
+    string[] text = new string[refs.Length];
+    for(int i = 0; i < refs.Length; i++) {
+        text[i] = HTML.Row(refs[i].GetReferencedRow().GetID());
+    }
+    return text;
 }
 
 string CreateGrantedEffectHtml(DatRow grantedEffect, int row) {
