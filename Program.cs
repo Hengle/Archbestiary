@@ -10,63 +10,14 @@ using PoeTerrain;
 
  
 Dictionary<int, DatRow> grantedEffectPerLevelsMax;
+Dictionary<int, DatRow> grantedStatSetPerLevelsMax;
 Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
-DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
-DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
+//DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
+//DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
+DatSpecIndex spec = DatSpecIndex.Create(@"E:\Anna\Downloads\schema.min(1).json");
+DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"F:\Extracted\PathOfExile\3.17.Siege\DatLate\Data\"), spec);
 
-/*
-for (int i = 0; i < dats["DivinationCardStashTabLayout.dat64"].RowCount; i++) {
-    DatRow row = dats["DivinationCardStashTabLayout.dat64"][i];
-    DatRow baseItem = row["BaseItemTypesKey"].GetReference().GetReferencedRow();
-    Console.WriteLine($"{i}|{baseItem.GetName()}");
-}
-return;
 
-void ArmourSets() {
-    HashSet<string> storeArmour = new HashSet<string>();
-    foreach(string line in File.ReadAllLines(@"E:\Extracted\PathOfExile\3.18.Sentinel\storeArmour.txt")) {
-        if (line.EndsWith(" Body Armour")) storeArmour.Add(line.Substring(0, line.IndexOf(" Body Armour")));
-        else if (line.EndsWith(" Body")) storeArmour.Add(line.Substring(0, line.IndexOf(" Body")));
-        else storeArmour.Add(line);
-    }
-
-    MagickImageCollection montage = new MagickImageCollection();
-    int setIndex = 0;
-    foreach(DatRow itemizedEffect in dats["ItemisedVisualEffect.dat64"]) {
-        foreach(int slot in itemizedEffect["MicrotransactionSlots"].GetPrimitiveArray<int>()) {
-            if(slot == 9) { //body
-                DatRow baseItem = itemizedEffect["BaseItemTypesKey"].GetReference().GetReferencedRow();
-                DatReference visualIdentityRef = baseItem["ItemVisualIdentity"].GetReference();
-                if(visualIdentityRef is null) Console.WriteLine(baseItem.GetName() + " - NULL");
-                else {
-                    DatRow visualIdentity = visualIdentityRef.GetReferencedRow();
-                    string name = baseItem.GetName();
-                    if (name.EndsWith(" Body Armour")) name = name.Substring(0, name.IndexOf(" Body Armour"));
-                    else if (name.EndsWith(" Body")) name = name.Substring(0, name.IndexOf(" Body"));
-                    MagickColor bgColor = storeArmour.Contains(name) ? MagickColors.Black : MagickColors.DarkRed ;
-                    MagickImage bg = new MagickImage(bgColor, 160, 240);
-                    MagickImage image = new MagickImage(Path.Combine(@"F:\Extracted\PathOfExile\ZZZZZZZZZZZZZZZZZZ3.18.Sentinel", visualIdentity["DDSFile"].GetString()));
-                    if (image.Height > 240) image.Resize(new MagickGeometry() { Height = 240 });
-                    bg.Draw(new Drawables()
-                        .Gravity(Gravity.Center)
-                        .Composite(0, 0, CompositeOperator.Over, image)
-                        .FillColor(MagickColors.White)
-                        .Gravity(Gravity.Southwest)
-                        .Text(2, 2, name));
-                    montage.Add(bg);
-                    Console.WriteLine(baseItem.GetName() + " - " + visualIdentity["DDSFile"].GetString());
-                    bg.Write($@"E:\Extracted\PathOfExile\ARMOURSETS\{setIndex}_{baseItem.GetName().Replace(' ', '_')}.png");
-                    setIndex++;
-                    //Console.WriteLine(baseItem.GetName() + " | " + visualIdentity["DDSFile"].GetString());
-                }
-            }
-        }
-    }
-    MagickImage combined = (MagickImage) montage.Montage(new MontageSettings() { BackgroundColor = MagickColors.Black, Geometry = new MagickGeometry(160, 240)});
-    Console.WriteLine($"{combined.Width}x{combined.Height}");
-    combined.Write(@"E:\Extracted\PathOfExile\Bodies.png");
-}
-*/
 
 //ListPacks();
 //return;
@@ -200,7 +151,7 @@ void CreateMonsterPages() {
     }
 
     grantedEffectPerLevelsMax = BuildEffectPerLevels(dats);
-
+    grantedStatSetPerLevelsMax = BuildStatSetPerLevels(dats);
 
     for (int monsterVarietyRow = 1; monsterVarietyRow < dats["MonsterVarieties.dat"].RowCount; monsterVarietyRow++) {
         var monsterVariety = dats["MonsterVarieties.dat"][monsterVarietyRow];
@@ -334,7 +285,7 @@ Dictionary<int, List<string[]>> BuildMonsterLocations() {
     Dictionary<int, HashSet<string>> monsterSpawners = new Dictionary<int, HashSet<string>>();
     foreach(DatRow row in dats["TableMonsterSpawners.dat"]) {
         string id = row["Metadata"].GetString().Replace("Metadata/", "");
-        foreach(DatReference monsterRef in row["MonsterVarieties"].GetReferenceArray()) {
+        foreach(DatReference monsterRef in row["SpawnsMonsters"].GetReferenceArray()) {
             if (!monsterSpawners.ContainsKey(monsterRef.RowIndex)) monsterSpawners[monsterRef.RowIndex] = new HashSet<string>();
             monsterSpawners[monsterRef.RowIndex].Add(id);
         }
@@ -393,6 +344,9 @@ Dictionary<int, HashSet<(int Monster, string Type)>> BuildMonsterRelations() {
             }
         }
     }
+
+    return monsterRelations;
+    //TODO redo summon relations
 
     //summons (god this is annoying)
     Dictionary<int, int> summonedSpecificMonstersIds = new Dictionary<int, int>();
@@ -481,6 +435,9 @@ string CreateGrantedEffectHtml(DatRow grantedEffect, int row) {
     DatRow activeSkill = rSkill.GetReferencedRow();
     string grantedEffectName = grantedEffect["Id"].GetString(); string skillName = activeSkill["Id"].GetString();
     DatRow grantedEffectPerLevel = grantedEffectPerLevelsMax[row];
+    DatRow grantedEffectStatsKeys = grantedEffect["StatSet"].GetReference().GetReferencedRow();
+    DatRow grantedEffectStatsPerLevel = grantedStatSetPerLevelsMax[grantedEffect["StatSet"].GetReference().RowIndex];
+
 
     html.AppendLine("<br/><table class=\"block\">");
     html.AppendLine($"<tr><td><h4>{grantedEffectName} ({row})</h4></td></tr>");
@@ -490,38 +447,29 @@ string CreateGrantedEffectHtml(DatRow grantedEffect, int row) {
     else
         html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex})</td></tr>");
 
-
-    float[] floatStatValues = new float[] {
-                    grantedEffectPerLevel["Stat1Float"].GetPrimitive<float>(),
-                    grantedEffectPerLevel["Stat2Float"].GetPrimitive<float>(),
-                    grantedEffectPerLevel["Stat3Float"].GetPrimitive<float>(),
-                    grantedEffectPerLevel["Stat4Float"].GetPrimitive<float>(),
-                    grantedEffectPerLevel["Stat5Float"].GetPrimitive<float>(),
-                    grantedEffectPerLevel["Stat6Float"].GetPrimitive<float>(),
-                    grantedEffectPerLevel["Stat7Float"].GetPrimitive<float>(),
-                    grantedEffectPerLevel["Stat8Float"].GetPrimitive<float>(),
-                    grantedEffectPerLevel["Stat9Float"].GetPrimitive<float>()
-                };
-
-    int[] intStatValues = new int[] {
-                    grantedEffectPerLevel["Stat1Value"].GetPrimitive<int>(),
-                    grantedEffectPerLevel["Stat2Value"].GetPrimitive<int>(),
-                    grantedEffectPerLevel["Stat3Value"].GetPrimitive<int>(),
-                    grantedEffectPerLevel["Stat4Value"].GetPrimitive<int>(),
-                    grantedEffectPerLevel["Stat5Value"].GetPrimitive<int>(),
-                    grantedEffectPerLevel["Stat6Value"].GetPrimitive<int>(),
-                    grantedEffectPerLevel["Stat7Value"].GetPrimitive<int>(),
-                    grantedEffectPerLevel["Stat8Value"].GetPrimitive<int>(),
-                    grantedEffectPerLevel["Stat9Value"].GetPrimitive<int>()
-                };
-
-    var grantedEffectStats = grantedEffectPerLevel["StatsKeys"].GetReferenceArray();
-    for (int gei = 0; gei < grantedEffectStats.Length; gei++) {
-        html.AppendLine($"<tr><td>{GetStatDescription(grantedEffectStats[gei].GetReferencedRow(), intStatValues[gei], floatStatValues[gei])}</td></tr>");
+    DatReference[] floatStats = grantedEffectStatsPerLevel["FloatStats"].GetReferenceArray();
+    float[] floatStatValues = grantedEffectStatsPerLevel["FloatStatsValues"].GetPrimitiveArray<float>();
+    int[] floatStatBaseValues = grantedEffectStatsPerLevel["BaseResolvedValues"].GetPrimitiveArray<int>();
+    for (int stat = 0; stat < floatStats.Length; stat++) {
+        html.AppendLine($"<tr><td  class=\"statFloat\">{floatStats[stat].GetReferencedRow().GetID()} {floatStatBaseValues[stat]} {floatStatValues[stat]}</td></tr>");
     }
 
-    foreach (DatReference staticStatRef in grantedEffectPerLevel["StatsKeys2"].GetReferenceArray()) {
-        html.AppendLine($"<tr><td>{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>");
+    DatReference[] perLevelStats = grantedEffectStatsPerLevel["AdditionalStats"].GetReferenceArray();
+    int[] perLevelStatValues = grantedEffectStatsPerLevel["AdditionalStatsValues"].GetPrimitiveArray<int>();
+
+    for (int stat = 0; stat < perLevelStats.Length; stat++) {
+        html.AppendLine($"<tr><td class=\"statLevel\">{perLevelStats[stat].GetReferencedRow().GetID()} {perLevelStatValues[stat]}</td></tr>");
+    }
+
+    DatReference[] constantStats = grantedEffectStatsKeys["ConstantStats"].GetReferenceArray();
+    int[] constantStatValues = grantedEffectStatsKeys["ConstantStatsValues"].GetPrimitiveArray<int>();
+
+    for(int stat = 0; stat < constantStats.Length; stat++) {
+        html.AppendLine($"<tr><td class=\"statConst\">{GetStatDescription(constantStats[stat].GetReferencedRow(), constantStatValues[stat])}</td></tr>");
+    }
+
+    foreach (DatReference staticStatRef in grantedEffectStatsKeys["ImplicitStats"].GetReferenceArray()) {
+        html.AppendLine($"<tr><td class=\"statTag\">{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>");
     }
     html.Append("</table>");
     return html.ToString();
@@ -538,7 +486,7 @@ void DumpMonsterSkills() {
     }
 }
 
-string GetStatDescription(DatRow stat, int intStatValue, float floatStatValue) {
+string GetStatDescription(DatRow stat, int intStatValue) {
     string id = stat["Id"].GetString();
     if(id == "alternate_minion") {
         for(int summonRow = 0; summonRow < dats["SummonedSpecificMonsters.dat"].RowCount; summonRow++) {
@@ -554,7 +502,7 @@ string GetStatDescription(DatRow stat, int intStatValue, float floatStatValue) {
             }
         }
     }
-    return $"{id} {intStatValue} {floatStatValue}";
+    return $"{id} {intStatValue}";
 }
 
 string GetMonsterCleanId(DatRow monsterVariety, bool replaceSlashes = true) {
@@ -593,7 +541,7 @@ string ListReferenceArrayIds(DatReference[] refs, string column = "Id") {
 
 string GetSkillDamageTypes(DatRow activeSkill) {
     HashSet<int> contextFlags = new HashSet<int>();
-    foreach (DatReference contextFlagRef in activeSkill["ContextFlags"].GetReferenceArray()) contextFlags.Add(contextFlagRef.RowIndex);
+    foreach (DatReference contextFlagRef in activeSkill["VirtualStatContextFlags"].GetReferenceArray()) contextFlags.Add(contextFlagRef.RowIndex);
     StringBuilder s = new StringBuilder();
 
     if (contextFlags.Contains(2)) s.Append("Attack/");
@@ -633,7 +581,7 @@ Dictionary<int, DatRow> BuildEffectPerLevels(DatFileIndex dats) {
     Dictionary<int, DatRow> effectPerLevels = new Dictionary<int, DatRow>();
 
     foreach(DatRow row in dats["GrantedEffectsPerLevel.dat"]) {
-        int grantedEffect = row["GrantedEffectsKey"].GetReference().RowIndex;
+        int grantedEffect = row["GrantedEffect"].GetReference().RowIndex;
         if (!effectPerLevels.ContainsKey(grantedEffect)) effectPerLevels[grantedEffect] = row;
         else {
             if (row["Level"].GetPrimitive<int>() > effectPerLevels[grantedEffect]["Level"].GetPrimitive<int>()) effectPerLevels[grantedEffect] = row;
@@ -643,141 +591,17 @@ Dictionary<int, DatRow> BuildEffectPerLevels(DatFileIndex dats) {
     return effectPerLevels;
 }
 
-//unfinished
-void ListDatStringIds() {
-    List<string[]> datIds = new List<string[]>();
 
-    foreach (DatFile dat in dats.Values) {
-        if (dat.RowCount < 126) continue;
-        if (!dat.Spec.ContainsKey("Id") || dat.Spec["Id"].Type != ColumnType.String) continue;
-        if (!dat.Name.EndsWith(".dat")) continue;
+Dictionary<int, DatRow> BuildStatSetPerLevels(DatFileIndex dats) {
+    Dictionary<int, DatRow> statSetPerLevels = new Dictionary<int, DatRow>();
 
-        Console.WriteLine(dat.Name);
-
-        string[] ids = new string[128];
-        ids[0] = dat.Name;
-
-        for (int i = 9; i < 127; i++) {
-            DatRow row = dat[i];
-            try {
-                string id = row["Id"].GetString();
-                if (id is not null) ids[i] = id;
-            } catch { }
-
-        }
-        datIds.Add(ids);
-    }
-
-    for (int i = 0; i < 128; i++) {
-        Console.Write(i.ToString() + "|");
-        for (int x = 0; x < datIds.Count; x++) Console.Write(datIds[x][i] + "|");
-        Console.WriteLine();
-    }
-
-
-}
-
-void ListMonsterNameLengths() {
-    foreach (DatRow row in dats["MonsterVarieties.dat"]) {
-        string name = row["Name"].GetString();
-        Console.WriteLine($"{name.Length} {name}");
-    }
-}
-
-void ListMonsterLocations() {
-    var monsterLocations = BuildMonsterLocations();
-    var monsterRelations = BuildMonsterRelations();
-    for (int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
-        DatRow monsterVariety = dats["MonsterVarieties.dat"][i];
-
-        //DatRow monsterType = monsterVariety["MonsterTypesKey"].GetReference().GetReferencedRow();
-        //if (monsterType["IsSummoned"].GetPrimitive<bool>()) continue;
-
-        string id = monsterVariety["Id"].GetString();
-        string name = monsterVariety["Name"].GetString();
-        if (name.Length >= 35) name = name.Substring(0, 35);
-        Console.Write(id + "@" + name);
-
-        
-        if (monsterLocations.ContainsKey(i)) {
-            foreach (var location in monsterLocations[i]) {
-                Console.Write("@" + location[0]);
-                for (int v = 1; v < location.Length; v++)
-                    Console.Write(" - " + location[v]);
-            }
-        }
-        
-        if (monsterRelations.ContainsKey(i)) 
-            foreach(var tuple in monsterRelations[i]) {
-                if (tuple.Type != "Base" && tuple.Type != "Summoned by") continue;
-                DatRow monster = dats["MonsterVarieties.dat"][tuple.Monster];
-                Console.Write($"@{tuple.Type} - {GetMonsterCleanId(monster, false)} ({monster["Name"].GetString()})");
-            }
-        Console.WriteLine();
-    }
-}
-
-void WriteArmEntityNames(int num) {
-    using (TextWriter writer = new StreamWriter(File.Open($"entities{num}.txt", FileMode.Create))) {
-        int i = 0;
-        foreach (string path in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.18.Sentinel\Metadata\Terrain", "*.arm", SearchOption.AllDirectories)) {
-            Arm a = new Arm(path);
-            if (a.entityLines.Length <= num) continue;
-            foreach (string line in a.entityLines[num]) {
-                //if (line.Contains("\"\"")) continue;
-                writer.WriteLine($"{a.entityLines.Length} {path.Substring(48, path.Length - 48)} {line}");
-            }
-            i++;
-            if (i % 100 == 0) Console.WriteLine(i);
+    foreach (DatRow row in dats["GrantedEffectStatSetsPerLevel.dat"]) {
+        int statSet = row["StatSet"].GetReference().RowIndex;
+        if (!statSetPerLevels.ContainsKey(statSet)) statSetPerLevels[statSet] = row;
+        else {
+            if (row["PlayerLevelReq"].GetPrimitive<int>() > statSetPerLevels[statSet]["PlayerLevelReq"].GetPrimitive<int>()) statSetPerLevels[statSet] = row;
         }
     }
+    return statSetPerLevels;
 }
 
-void ListAreaMonsters() {
-    BuildMonsterLocations();
-    foreach (string area in areaMonsters.Keys) {
-        Console.WriteLine(area);
-        foreach (string monster in areaMonsters[area]) {
-            Console.WriteLine(monster);
-        }
-        Console.WriteLine();
-    }
-    return;
-}
-
-void ListUsedAOs() {
-    HashSet<string> attatchments = new HashSet<string>();
-    foreach (string ao in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.18.Sentinel\Metadata\Monsters", "*.ao", SearchOption.AllDirectories)) {
-        foreach (string attachment in GetAttatchmentsFromAo(ao))
-            attatchments.Add(@"E:\Extracted\PathOfExile\3.18.Sentinel\" + attachment.Replace('/', '\\'));
-    }
-
-    HashSet<string> aos = new HashSet<string>();
-    Console.WriteLine(aos.Count);
-    foreach (DatRow monster in dats["MonsterVarieties.dat"]) {
-        foreach (string ao in monster["AOFiles"].GetStringArray()) {
-            aos.Add(@"E:\Extracted\PathOfExile\3.18.Sentinel\" + ao.Replace('/', '\\'));
-        }
-    }
-
-    foreach (string ao in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.18.Sentinel\Metadata\Monsters", "*.ao", SearchOption.AllDirectories)) {
-        if (aos.Contains(ao)) Console.WriteLine(ao + "|MONSTER");
-        else if (attatchments.Contains(ao)) Console.WriteLine(ao + "|ATTATCHMENT");
-        else Console.WriteLine(ao + "|UNUSED");
-    }
-
-}
-
-void ListMonsterRigs() {
-    for(int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
-        DatRow monster = dats["MonsterVarieties.dat"][i];
-        DatReference monsterType = monster["MonsterTypesKey"].GetReference();
-        string monsterTypeId = monsterType.GetReferencedRow()["Id"].GetString();
-        string monsterId = monster["Id"].GetString();
-
-        foreach (string ao in monster["AOFiles"].GetStringArray()) {
-            string rig = GetRigFromAO(Path.Combine(@"E:\Extracted\PathOfExile\3.18.Sentinel", ao));
-            Console.WriteLine($"{monsterType.RowIndex}@{monsterTypeId}@{i}@{monsterId}@{ao}@{rig}");
-        }
-    }
-}

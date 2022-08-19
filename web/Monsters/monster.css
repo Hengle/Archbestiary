@@ -14,3 +14,15 @@ h4 {
 .maincolumn {
     vertical-align: top;
 }
+
+.statFloat {
+	color: crimson;
+}
+
+.statLevel {
+	color: mediumblue;
+}
+
+.statTag {
+	color: #777777;
+}
