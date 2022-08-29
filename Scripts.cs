@@ -1,4 +1,120 @@
-﻿/*
+﻿using ImageMagick;
+using PoeSharp.Filetypes.Dat;
+
+static class Scripts {
+    public static void PrintColours(string path = @"F:\Extracted\PathOfExile\3.19.Kalandra\uicolours.txt") {
+        MagickImageCollection images = new MagickImageCollection();
+        foreach (string line in File.ReadAllLines(path)) {
+            string[] words = line.Split('"');
+            string[] colournames = words[3].Split(',');
+            MagickColor colour = new MagickColor(byte.Parse(colournames[0]), byte.Parse(colournames[1]), byte.Parse(colournames[2]));
+            MagickImage image = new MagickImage(colour, 256, 16);
+            image.Draw(new Drawables()
+                .StrokeColor(MagickColors.White).StrokeWidth(3).Text(4, 11, words[1])
+            );
+            image.Draw(new Drawables().FillColor(new MagickColor(colour.R, colour.G, colour.B, 130)).Rectangle(0, 0, 256, 16));
+            image.Draw(new Drawables()
+                .FillColor(MagickColors.Black).Text(4, 11, words[1])
+            );
+            images.Add(image);
+            Console.WriteLine($"{words[1]}   -   {words[3]}");
+            //if (images.Count > 10) break;
+        }
+        var montage = images.Montage(new MontageSettings() { Geometry = new MagickGeometry(256, 16), TileGeometry = new MagickGeometry(1, images.Count) });
+        Console.WriteLine($"{montage.Width} {montage.Height}");
+        montage.Write(@"F:\Extracted\PathOfExile\3.19.Kalandra\colours.png");
+    }
+
+    public static void MonsterLife(Bestiary b) {
+        Console.Write("    const lifePerLevel = [");
+        for(int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
+            DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
+            Console.Write(row["Life"].GetPrimitive<int>().ToString() + ", ");
+        }
+        Console.Write("];\n    const armourPerLevel = [");
+        for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
+            DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
+            Console.Write(row["Armour"].GetPrimitive<int>().ToString() + ", ");
+        }
+        Console.Write("];\n    const evasionPerLevel = [");
+        for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
+            DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
+            Console.Write(row["Evasion"].GetPrimitive<int>().ToString() + ", ");
+        }
+
+        Console.Write("];\n    const fireRes = [[");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["FireNormal"].GetPrimitive<int>().ToString() + ",");
+        }
+        Console.Write("], [");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["FireCruel"].GetPrimitive<int>().ToString() + ",");
+        }
+        Console.Write("], [");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["FireMerciless"].GetPrimitive<int>().ToString() + ",");
+        }
+
+        Console.Write("]];\n    const coldRes = [[");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["ColdNormal"].GetPrimitive<int>().ToString() + ",");
+        }
+        Console.Write("], [");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["ColdCruel"].GetPrimitive<int>().ToString() + ",");
+        }
+        Console.Write("], [");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["ColdMerciless"].GetPrimitive<int>().ToString() + ",");
+        }
+
+        Console.Write("]];\n    const lightningRes = [[");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["LightningNormal"].GetPrimitive<int>().ToString() + ",");
+        }
+        Console.Write("], [");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["LightningCruel"].GetPrimitive<int>().ToString() + ",");
+        }
+        Console.Write("], [");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["LightningMerciless"].GetPrimitive<int>().ToString() + ",");
+        }
+
+        Console.Write("]];\n    const chaosRes = [[");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["ChaosNormal"].GetPrimitive<int>().ToString() + ",");
+        }
+        Console.Write("], [");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["ChaosCruel"].GetPrimitive<int>().ToString() + ",");
+        }
+        Console.Write("], [");
+        for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {
+            DatRow row = b.dats["MonsterResistances.dat64"][i];
+            Console.Write(row["ChaosMerciless"].GetPrimitive<int>().ToString() + ",");
+        }
+
+
+        Console.Write("];");
+
+    }
+}
+
+
+/*
+ 
 for (int i = 0; i < dats["DivinationCardStashTabLayout.dat64"].RowCount; i++) {
     DatRow row = dats["DivinationCardStashTabLayout.dat64"][i];
     DatRow baseItem = row["BaseItemTypesKey"].GetReference().GetReferencedRow();
@@ -189,5 +305,65 @@ void ListMonsterRigs() {
         }
     }
 }
+
+static void ListPacks() {
+    Dictionary<string, List<string>> packs = new Dictionary<string, List<string>>();
+
+    foreach (DatRow row in dats["MonsterPacks.dat"]) {
+        string packName = row["Id"].GetString();
+        packs[packName] = new List<string>();
+        foreach (DatReference monsterRef in row["BossMonster_MonsterVarietiesKeys"].GetReferenceArray()) {
+            DatRow monster = monsterRef.GetReferencedRow();
+            packs[packName].Add($"{monster["Name"].GetString()}@{monster["Id"]}");
+        }
+    }
+    foreach (DatRow row in dats["MonsterPackEntries.dat"]) {
+        DatRow monster = row["MonsterVarietiesKey"].GetReference().GetReferencedRow();
+        DatRow pack = row["MonsterPacksKey"].GetReference().GetReferencedRow();
+        string packName = pack["Id"].GetString();
+        packs[packName].Add($"{monster["Name"].GetString()}@{monster["Id"]}");
+    }
+
+    foreach (string pack in packs.Keys) {
+        foreach (string monster in packs[pack]) {
+            Console.WriteLine(pack + "@" + monster);
+        }
+        Console.WriteLine();
+    }
+
+}
+
+    static void DumpMonsterSkills() {
+        grantedEffectPerLevelsMax = BuildEffectPerLevels(dats);
+
+        using (TextWriter writer = new StreamWriter(File.Open(@"E:\Anna\Anna\Visual Studio\Archbestiaryweb\skillstest.html", FileMode.Create))) {
+            for (int i = 0; i < dats["GrantedEffects.dat"].RowCount; i++) {
+                DatRow grantedEffect = dats["GrantedEffects.dat"][i];
+                writer.WriteLine(CreateGrantedEffectHtml(grantedEffect, i));
+            }
+        }
+    }
+
+    static string ListReferenceArrayIds(DatReference[] refs, string column = "Id") {
+        StringBuilder s = new StringBuilder();
+        for (int i = 0; i < refs.Length; i++) s.Append(refs[i].GetReferencedRow()[column].GetString() + ", ");
+        if (s.Length > 0) s.Remove(s.Length - 2, 2);
+        return s.ToString();
+    }
+
+    static void ListDatRowCounts() {
+        foreach (DatFile dat in dats.Values) {
+            if (dat.Name.EndsWith(".dat"))
+                Console.WriteLine($"{dat.RowCount}|{dat.Name}");
+        }
+    }
+
+    static void ListSkillContextFlags() {
+        foreach (DatRow activeSkill in dats["ActiveSkills.dat"]) {
+            Console.Write(activeSkill["Id"].GetString() + ", ");
+            foreach (DatReference contextFlagRef in activeSkill["ContextFlags"].GetReferenceArray()) Console.Write(contextFlagRef.GetReferencedRow()["Id"].GetString() + ", ");
+            Console.WriteLine();
+        }
+    }
 
 */
