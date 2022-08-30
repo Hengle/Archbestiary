@@ -21,7 +21,7 @@ public class Bestiary {
     //return;
 
     public Bestiary() {
-        spec = DatSpecIndex.Create(@"E:\Anna\Downloads\schema.min(3).json");
+        spec = DatSpecIndex.Create(@"E:\Anna\Downloads\schema.min(4).json");
         dats = new DatFileIndex(new DiskDirectory(@"F:\Extracted\PathOfExile\3.19.Kalandra\Data\"), spec);
     }
 
@@ -240,8 +240,7 @@ public class Bestiary {
 
             html.WriteLine(
 @"<script type=""module"">
-    import {SetStats} from ""./_Util.js"";
-    import {SetDamage} from ""./_Util.js"";
+    import {SetStats, SetDamage, SetDot} from ""./_Util.js"";
     let slider = document.getElementById(""levelSlide"");
     function Update() {
 ");
@@ -449,6 +448,13 @@ public class Bestiary {
         "spell_minimum_base_lightning_damage", "spell_maximum_base_lightning_damage" ,
         "spell_minimum_base_chaos_damage", "spell_maximum_base_chaos_damage"
     };
+    static string[] dotStatIds = new string[] {
+        "base_physical_damage_to_deal_per_minute",
+        "base_fire_damage_to_deal_per_minute",
+        "base_cold_damage_to_deal_per_minute",
+        "base_lightning_damage_to_deal_per_minute",
+        "base_chaos_damage_to_deal_per_minute",
+    };
     string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate) {
         float[] damageValues = new float[10];
 
@@ -485,8 +491,15 @@ public class Bestiary {
             int damagestat = Array.IndexOf(damageStatIds, id);
             if(damagestat != -1) {
                 damageValues[damagestat] = floatStatValues[stat];
-            } else
-            html.AppendLine($"<tr><td  class=\"statFloat\">{floatStats[stat].GetReferencedRow().GetID()} {floatStatBaseValues[stat]} {floatStatValues[stat]}</td></tr>");
+            } else {
+                damagestat = Array.IndexOf(dotStatIds, id);
+                if(damagestat != -1) {
+                    html.AppendLine($"<tr><td class=\"statDamage\"  id=\"{row}_d{damagestat}\">A</td></tr>");
+                    onUpdate.Add($"        SetDot(\"{row}_d{damagestat}\", slider.value, {baseEffectiveness}, {incrementalEffectiveness}, {floatStatValues[stat]}, {damagestat});");
+                } else {
+                    html.AppendLine($"<tr><td  class=\"statFloat\">{floatStats[stat].GetReferencedRow().GetID()} {floatStatBaseValues[stat]} {floatStatValues[stat]}</td></tr>");
+                }
+            }
             
 
         }

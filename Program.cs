@@ -10,8 +10,8 @@ class Program {
     public static void Main(string[] args) {
 
         Bestiary b = new Bestiary();
-        //Scripts.MonsterBaseStats(b); return;
-        b.CreateMonsterList(); return;
+        Scripts.MonsterBaseStats(b); return;
+        //b.CreateMonsterList(); return;
         b.CreateMonsterPages(); return;
         /*
         for (int i = 1; i <= 100; i++) {
