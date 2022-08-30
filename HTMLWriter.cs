@@ -28,7 +28,7 @@ namespace Archbestiary.Util {
         //public void TableStart(string hClass = null) { if (hClass is null) writer.WriteLine("<table>"); else writer.WriteLine($"<table class=\"{hClass}\">"); }
         //public void TableEnd() { writer.WriteLine("</table>"); }
 
-        public void Cell(string value, string? hClass = null) { if (hClass is null) writer.Write("<td>" + value + "/td"); else writer.Write($"<td class=\"{hClass}\">{value}</td>"); }
+
 
 
 
@@ -60,7 +60,11 @@ namespace Archbestiary.Util {
             if (cells is null) return "";
             StringBuilder b = new StringBuilder();
             b.Append("<tr>");
-            for (int i = 0; i < cells.Length; i++) if(cells[i] is not null) b.Append("<td>" + cells[i].ToString() + "</td>");
+            for (int i = 0; i < cells.Length; i++) 
+                if (cells[i] is not null) {
+                    if (cells[i].ToString().StartsWith("<td")) b.Append(cells[i]);
+                    else b.Append("<td>" + cells[i].ToString() + "</td>");
+                }
             b.Append("</tr>");
             return b.ToString();
         }
@@ -120,6 +124,17 @@ namespace Archbestiary.Util {
                 rows[i] = HTML.RowFixedColumns(columns, list[i]);
             }
             return rows;
+        }
+
+        public static string Cell(string value, string? hClass = null, string? id = null) {
+            if (id is null) {
+                if (hClass is null) return "<td>" + value + "/td";
+                else return $"<td class=\"{hClass}\">{value}</td>";
+            } else {
+                if (hClass is null) return $"<td id=\"{id}\">{value}</td>";
+                else return $"<td id=\"{id}\" class=\"{hClass}\">{value}</td>";
+            }
+
         }
 
         public static string Link(string link, string content)  { return $"<a href=\"{link}\">{content}</a>"; }

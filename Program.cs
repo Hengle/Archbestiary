@@ -10,7 +10,9 @@ class Program {
     public static void Main(string[] args) {
 
         Bestiary b = new Bestiary();
-        //b.CreateMonsterPages();
+        //Scripts.MonsterBaseStats(b); return;
+        b.CreateMonsterList(); return;
+        b.CreateMonsterPages(); return;
         /*
         for (int i = 1; i <= 100; i++) {
             float dam = (3885209 + 360246 * (i - 1)) / 1000000f;
@@ -19,7 +21,7 @@ class Program {
         }
         */
 
-        Scripts.MonsterLife(b); return;
+
 
 
         //BLESSED SISTER CHAMBER

@@ -21,7 +21,7 @@ public class Bestiary {
     //return;
 
     public Bestiary() {
-        spec = DatSpecIndex.Create(@"E:\Anna\Downloads\schema.min(2).json");
+        spec = DatSpecIndex.Create(@"E:\Anna\Downloads\schema.min(3).json");
         dats = new DatFileIndex(new DiskDirectory(@"F:\Extracted\PathOfExile\3.19.Kalandra\Data\"), spec);
     }
 
@@ -75,8 +75,8 @@ public class Bestiary {
                 string name = monsterVariety["Name"].GetString();
                 if (name.Length >= 35) name = name.Substring(0, 35);
                 html.AppendLine($"<tr><td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{name}</a></td>");
-                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,lifeMult/100)}\" target=\"body\">{lifeMult}</a></td>");
-                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,(damageMult-50)/50)}\" target=\"body\">{damageMult}</a></td>");
+                //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,lifeMult/100)}\" target=\"body\">{lifeMult}</a></td>");
+                //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,(damageMult-50)/50)}\" target=\"body\">{damageMult}</a></td>");
                 //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{added}</a></td>");
                 html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a></td></tr>");
             }
@@ -139,10 +139,14 @@ public class Bestiary {
         grantedStatSetPerLevelsMax = BuildStatSetPerLevels(dats);
 
         for (int monsterVarietyRow = 1; monsterVarietyRow < dats["MonsterVarieties.dat64"].RowCount; monsterVarietyRow++) {
+
+            List<string> onUpdate = new List<string>();
+
             var monsterVariety = dats["MonsterVarieties.dat64"][monsterVarietyRow];
             DatReference monsterTypeRef = monsterVariety["MonsterTypesKey"].GetReference();
             DatRow monsterType = monsterTypeRef.GetReferencedRow();
 
+            /*
             int fireRes = 0; int coldRes = 0; int lightningRes = 0; int chaosRes = 0;
             DatReference? resReference = monsterType["MonsterResistancesKey"].GetReference();
             if (resReference is not null) {
@@ -152,6 +156,9 @@ public class Bestiary {
                 lightningRes = monsterResistance["LightningMerciless"].GetPrimitive<int>();
                 chaosRes = monsterResistance["ChaosMerciless"].GetPrimitive<int>();
             }
+            */
+            DatReference? resReference = monsterType["MonsterResistancesKey"].GetReference();
+            int res = resReference is null ? 0 : resReference.RowIndex;
 
             int lifeMult = monsterVariety["LifeMultiplier"].GetPrimitive<int>();
             int ailmentMult = monsterVariety["AilmentThresholdMultiplier"].GetPrimitive<int>();
@@ -162,7 +169,7 @@ public class Bestiary {
             int damageMult = monsterVariety["DamageMultiplier"].GetPrimitive<int>();
             int attackTime = monsterVariety["AttackSpeed"].GetPrimitive<int>();
 
-
+            onUpdate.Add($"        SetStats(slider.value, {lifeMult}, {ailmentMult}, {armourMult}, {evasionMult}, {esMult}, {res});");
 
             string monsterID = monsterVariety["Id"].GetString();
             monsterID = monsterID.Replace("Metadata/Monsters/", "");
@@ -190,21 +197,31 @@ public class Bestiary {
             html.WriteTable(
                 HTML.RowClass(null, "maincolumn",
                     HTML.Array(
+
                         HTML.TableClass("block",
                             HTML.Row($"<h4>{monsterName}</h4>"),
                             HTML.Row(monsterType["Id"].GetString())
                         ),
+
                         HTML.Break(),
+
+                        "<form>",
+                        @"    <input id=""levelSlide"" type=""range"" value=""68"" min=""1"" max=""85"">Level:</input>",
+                        @"    <output id=""levelOut"">68</output>",
+                        "</form>",
+
+                        HTML.Break(),
+
                         HTML.TableClass("block",
-                            HTML.Row("Life Mult:", lifeMult, "Ailment Threshold:", ailmentMult),
-                            HTML.Row("Armour Mult:", armourMult, "Fire Resistance:", fireRes),
-                            HTML.Row("Evasion Mult:", evasionMult, "Cold Resistance:", coldRes),
-                            HTML.Row("Energy Shield:", esMult, "Lightning Resistance:", lightningRes),
-                            HTML.Row("Damage Mult:", damageMult, "Chaos Resistance:", chaosRes)
+                            HTML.Row(HTML.Cell("Life:", "cellLife"), HTML.Cell("0", id:"life"), HTML.Cell("Ailment Threshold:", "cellLife"), HTML.Cell("0", id: "ailment")),
+                            HTML.Row(HTML.Cell("Armour:", "cellPhys"), HTML.Cell("0", id: "arm"), HTML.Cell("Fire Resistance:", "cellFire"), HTML.Cell("0", id: "fire")),
+                            HTML.Row(HTML.Cell("Evasion:", "cellDex"), HTML.Cell("0", id: "eva"), HTML.Cell("Cold Resistance:", "cellCold"), HTML.Cell("0", id: "cold")),
+                            HTML.Row(HTML.Cell("Energy Shield:", "cellInt"), HTML.Cell("0", id: "es"), HTML.Cell("Lightning Resistance:", "cellLight"), HTML.Cell("0", id: "lightning")),
+                            HTML.Row("", "", HTML.Cell("Chaos Resistance:", "cellChaos"), HTML.Cell("0", id: "chaos")) //"Damage Mult:", damageMult
                         ),
                         HTML.Break(),
                         HTML.TableClass("block", CreateMonsterModRows(monsterVariety)),
-                        CreateGrantedEffectTables(monsterVariety)
+                        CreateGrantedEffectTables(monsterVariety, onUpdate)
                     ),
                     HTML.Array(
 
@@ -220,6 +237,21 @@ public class Bestiary {
                     )
                 )
             );
+
+            html.WriteLine(
+@"<script type=""module"">
+    import {SetStats} from ""./_Util.js"";
+    import {SetDamage} from ""./_Util.js"";
+    let slider = document.getElementById(""levelSlide"");
+    function Update() {
+");
+            foreach (string line in onUpdate) html.WriteLine(line);
+            html.WriteLine(
+@"    }
+    slider.addEventListener(""input"", Update );
+    Update();
+</script>
+");
             html.Close();
 
 
@@ -391,12 +423,12 @@ public class Bestiary {
     }
 
 
-    string CreateGrantedEffectTables(DatRow monsterVariety) {
+    string CreateGrantedEffectTables(DatRow monsterVariety, List<string> onUpdate) {
         DatReference[] refs = monsterVariety["GrantedEffectsKeys"].GetReferenceArray();
         if (refs is null) return "";
         StringBuilder effectTables = new StringBuilder();
         for (int i = 0; i < refs.Length; i++) {
-            effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex));
+            effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex, onUpdate));
         }
         return effectTables.ToString();
     }
@@ -410,7 +442,17 @@ public class Bestiary {
         return text;
     }
 
-    string CreateGrantedEffectHtml(DatRow grantedEffect, int row) {
+    static string[] damageStatIds = new string[] { 
+        "spell_minimum_base_physical_damage", "spell_maximum_base_physical_damage" ,
+        "spell_minimum_base_fire_damage", "spell_maximum_base_fire_damage" ,
+        "spell_minimum_base_cold_damage", "spell_maximum_base_cold_damage" ,
+        "spell_minimum_base_lightning_damage", "spell_maximum_base_lightning_damage" ,
+        "spell_minimum_base_chaos_damage", "spell_maximum_base_chaos_damage"
+    };
+    string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate) {
+        float[] damageValues = new float[10];
+
+
         StringBuilder html = new StringBuilder();
         DatReference rSkill = grantedEffect["ActiveSkill"].GetReference();
         if (rSkill is null) {
@@ -424,7 +466,7 @@ public class Bestiary {
         DatRow grantedEffectStatsPerLevel = grantedStatSetPerLevelsMax[grantedEffect["StatSet"].GetReference().RowIndex];
 
         html.AppendLine("<br/><table class=\"block\">");
-        html.AppendLine($"<tr><td><h4>{grantedEffectName} ({row})</h4></td></tr>");
+        html.AppendLine($"<tr><td class=\"cellGem\"><h4>{grantedEffectName} ({row})</h4></td></tr>");
         string damageType = GetSkillDamageTypes(activeSkill);
         if (damageType is not null)
             html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex}) - {damageType}</td></tr>");
@@ -433,13 +475,28 @@ public class Bestiary {
 
         float baseEffectiveness = statSet["BaseEffectiveness"].GetPrimitive<float>();
         float incrementalEffectiveness = statSet["IncrementalEffectiveness"].GetPrimitive<float>();
-        html.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
+        //html.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
 
         DatReference[] floatStats = grantedEffectStatsPerLevel["FloatStats"].GetReferenceArray();
         float[] floatStatValues = grantedEffectStatsPerLevel["FloatStatsValues"].GetPrimitiveArray<float>();
         int[] floatStatBaseValues = grantedEffectStatsPerLevel["BaseResolvedValues"].GetPrimitiveArray<int>();
         for (int stat = 0; stat < floatStats.Length; stat++) {
+            string id = floatStats[stat].GetReferencedRow().GetID();
+            int damagestat = Array.IndexOf(damageStatIds, id);
+            if(damagestat != -1) {
+                damageValues[damagestat] = floatStatValues[stat];
+            } else
             html.AppendLine($"<tr><td  class=\"statFloat\">{floatStats[stat].GetReferencedRow().GetID()} {floatStatBaseValues[stat]} {floatStatValues[stat]}</td></tr>");
+            
+
+        }
+
+        //Damage Lines
+        for(int i = 0; i < 10; i += 2) {
+            if (damageValues[i] > 0 && damageValues[i+1] > 0) {
+                html.AppendLine($"<tr><td class=\"statDamage\"  id=\"{row}_{i/2}\">A</td></tr>");
+                onUpdate.Add($"        SetDamage(\"{row}_{i / 2}\", slider.value, {baseEffectiveness}, {incrementalEffectiveness}, {damageValues[i]}, {damageValues[i + 1]}, {i / 2});");
+            }
         }
 
         DatReference[] perLevelStats = grantedEffectStatsPerLevel["AdditionalStats"].GetReferenceArray();

@@ -1,14 +1,19 @@
+body {
+    color: #c8c8c8;
+    background-color: #222222;
+}
+
 h4 {
     margin-bottom: 0px;
 }
 
 .block {
     padding: 2px;
-    background-color: #dddddd;
+    background-color: #3e3e3e;
 }
 
 .block > tbody {
-    background-color: #eeeeee;
+    background-color: #333333;
 }
 
 .maincolumn {
@@ -16,13 +21,54 @@ h4 {
 }
 
 .statFloat {
-	color: crimson;
+	color: #c8676e;
 }
 
 .statLevel {
-	color: mediumblue;
+	color: #8888ff;
 }
 
 .statTag {
 	color: #777777;
+}
+
+.statDamage {
+    color: #8888ff;
+}
+
+.cellLife {
+    color: #d26063;
+}
+
+.cellPhys {
+    color: #c6aba5;
+}
+
+.cellDex {
+    color: #86bda3;
+}
+
+
+.cellInt {
+    color: #a2cffb;
+}
+
+.cellFire {
+    color: #f59675;
+}
+
+.cellCold {
+    color: #a8d5e4;
+}
+
+.cellLight {
+    color: #f8cb76;
+}
+
+.cellChaos {
+    color: #d8a7d3;
+}
+
+.cellGem {
+    color: #1ba29b;
 }

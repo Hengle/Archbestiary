@@ -25,21 +25,21 @@ static class Scripts {
         montage.Write(@"F:\Extracted\PathOfExile\3.19.Kalandra\colours.png");
     }
 
-    public static void MonsterLife(Bestiary b) {
+    public static void MonsterBaseStats(Bestiary b) {
         Console.Write("    const lifePerLevel = [");
         for(int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
             DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
-            Console.Write(row["Life"].GetPrimitive<int>().ToString() + ", ");
+            Console.Write(row["Life"].GetPrimitive<int>().ToString() + ",");
         }
         Console.Write("];\n    const armourPerLevel = [");
         for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
             DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
-            Console.Write(row["Armour"].GetPrimitive<int>().ToString() + ", ");
+            Console.Write(row["Armour"].GetPrimitive<int>().ToString() + ",");
         }
         Console.Write("];\n    const evasionPerLevel = [");
         for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
             DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
-            Console.Write(row["Evasion"].GetPrimitive<int>().ToString() + ", ");
+            Console.Write(row["Evasion"].GetPrimitive<int>().ToString() + ",");
         }
 
         Console.Write("];\n    const fireRes = [[");
