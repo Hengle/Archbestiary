@@ -2,6 +2,61 @@
 using PoeSharp.Filetypes.Dat;
 
 static class Scripts {
+
+    public static void ListMonsterColumns(Bestiary b) {
+        var monsterDef = b.spec["MonsterVarieties"];
+        for (int i = 0; i < monsterDef.Columns.Count; i++) {
+            Console.Write(monsterDef.Columns[i].Name + "|");
+        }
+        Console.WriteLine();
+    }
+
+    public static void ListMonster(Bestiary b, int monsterRow) {
+        DatRow monster = b.dats["MonsterVarieties.dat64"][monsterRow];
+        var monsterDef = b.spec["MonsterVarieties"];
+        for (int i = 0; i < monsterDef.Columns.Count; i++) {
+            var col = monsterDef.Columns[i];
+            string val = "OOOOO88";
+            if (col.Array) {
+                if (col.Type == PoeSharp.Filetypes.Dat.Specification.ColumnType.ForeignRow) {
+                    DatReference[]? refs = monster[col.Name].GetReferenceArray();
+                    if (refs is null) val = "null";
+                    else {
+                        val = "<";
+                        for (int refIndex = 0; refIndex < refs.Length - 1; refIndex++) {
+                            val = val + $"{refs[refIndex].RowIndex}, ";
+                        }
+                        if (refs.Length > 0) val = val + refs[refs.Length - 1].RowIndex.ToString();
+                        val = val + ">";
+                    }
+
+                } else if (col.Type == PoeSharp.Filetypes.Dat.Specification.ColumnType.I32) {
+                    val = "";
+                    int[] vals = monster[col.Name].GetPrimitiveArray<int>();
+                    for (int v = 0; v < vals.Length - 1; v++) val = val + vals[i].ToString() + ", ";
+                    if (vals.Length > 0) val = val + vals[vals.Length - 1].ToString();
+                } else if (col.Type == PoeSharp.Filetypes.Dat.Specification.ColumnType.String) {
+                    string[] vals = monster[col.Name].GetStringArray();
+                    val = "";
+                    for (int v = 0; v < vals.Length - 1; v++) val = val + vals[i] + ", ";
+                    if (vals.Length > 0) val = val + vals[vals.Length - 1];
+                }
+            } else if (col.Type == PoeSharp.Filetypes.Dat.Specification.ColumnType.I32) val = monster[col.Name].GetPrimitive<int>().ToString();
+            else if (col.Type == PoeSharp.Filetypes.Dat.Specification.ColumnType.String) {
+                string? s = monster[col.Name].GetString();
+                val = s is null ? "null" : s;
+            } else if (col.Type == PoeSharp.Filetypes.Dat.Specification.ColumnType.Bool) val = monster[col.Name].GetPrimitive<bool>().ToString();
+            else if (col.Type == PoeSharp.Filetypes.Dat.Specification.ColumnType.ForeignRow) {
+                DatReference? foreignRef = monster[col.Name].GetReference();
+                if (foreignRef is null) val = "null";
+                else val = $"<{foreignRef.RowIndex}>";
+            } else if (col.Type == PoeSharp.Filetypes.Dat.Specification.ColumnType.F32) val = monster[col.Name].GetPrimitive<float>().ToString();
+            if (val == "OOOOO88") Console.WriteLine($"UNK_{col.Type}{(col.Array ? "_ARRAY" : "")}_{(int)col.Type} - {col.Name}  ");
+            else Console.Write($"{val}|");
+        }
+        Console.WriteLine();
+    }
+
     public static void PrintColours(string path = @"F:\Extracted\PathOfExile\3.19.Kalandra\uicolours.txt") {
         MagickImageCollection images = new MagickImageCollection();
         foreach (string line in File.ReadAllLines(path)) {
@@ -26,7 +81,20 @@ static class Scripts {
     }
 
     public static void MonsterBaseStats(Bestiary b) {
-        Console.Write("    const lifePerLevel = [");
+
+        /*
+        Console.Write("];\n    const evasionPerLevel = [");
+        for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
+            DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
+            Console.WriteLine(row["UnkEvasion"].GetPrimitive<int>() * 1.0f / row["Evasion"].GetPrimitive<int>());
+        }
+        */
+        Console.Write("    const damagePerLevel = [");
+        for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
+            DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
+            Console.Write(row["Damage"].GetPrimitive<float>().ToString() + ",");
+        }
+        Console.Write("];\n    const lifePerLevel = [");
         for(int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
             DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
             Console.Write(row["Life"].GetPrimitive<int>().ToString() + ",");
@@ -40,6 +108,11 @@ static class Scripts {
         for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
             DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
             Console.Write(row["Evasion"].GetPrimitive<int>().ToString() + ",");
+        }
+        Console.Write("];\n    const evasiveEvasionPerLevel = [");
+        for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
+            DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
+            Console.Write(row["UnkEvasion"].GetPrimitive<int>().ToString() + ",");
         }
 
         Console.Write("];\n    const fireRes = [[");

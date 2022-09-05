@@ -12,7 +12,7 @@ public class Bestiary {
     Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
     //DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
     //DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
-    DatSpecIndex spec;
+    public DatSpecIndex spec;
     public DatFileIndex dats;
 
 
@@ -21,8 +21,8 @@ public class Bestiary {
     //return;
 
     public Bestiary() {
-        spec = DatSpecIndex.Create(@"E:\Anna\Downloads\schema.min(4).json");
-        dats = new DatFileIndex(new DiskDirectory(@"F:\Extracted\PathOfExile\3.19.Kalandra\Data\"), spec);
+        spec = DatSpecIndex.Create(@"E:\Anna\Downloads\schema.min(5).json");
+        dats = new DatFileIndex(new DiskDirectory(@"F:\Extracted\PathOfExile\3.19.Kalandra\ROOT\Data\"), spec);
     }
 
     //CreateMonsterList();
@@ -72,11 +72,18 @@ public class Bestiary {
                 int lifeMult = monsterVariety["LifeMultiplier"].GetPrimitive<int>();
                 int damageMult = monsterVariety["DamageMultiplier"].GetPrimitive<int>();
 
+                int armourMult = monsterType["Armour"].GetPrimitive<int>();
+                int evasionMult = monsterType["Evasion"].GetPrimitive<int>();
+                int esMult = monsterType["EnergyShieldFromLife"].GetPrimitive<int>();
+
                 string name = monsterVariety["Name"].GetString();
                 if (name.Length >= 35) name = name.Substring(0, 35);
                 html.AppendLine($"<tr><td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{name}</a></td>");
                 //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,lifeMult/100)}\" target=\"body\">{lifeMult}</a></td>");
-                //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,(damageMult-50)/50)}\" target=\"body\">{damageMult}</a></td>");
+                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,(damageMult-50)/50)}\" target=\"body\">{damageMult}</a></td>");
+                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9, armourMult / 10)}\" target=\"body\">{armourMult}</a></td>");
+                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9, evasionMult / 10)}\" target=\"body\">{evasionMult}</a></td>");
+                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9, esMult / 10)}\" target=\"body\">{esMult}</a></td>");
                 //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{added}</a></td>");
                 html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a></td></tr>");
             }
@@ -168,6 +175,7 @@ public class Bestiary {
 
             int damageMult = monsterVariety["DamageMultiplier"].GetPrimitive<int>();
             int attackTime = monsterVariety["AttackSpeed"].GetPrimitive<int>();
+            int damageSpread = monsterType["DamageSpread"].GetPrimitive<int>();
 
             onUpdate.Add($"        SetStats(slider.value, {lifeMult}, {ailmentMult}, {armourMult}, {evasionMult}, {esMult}, {res});");
 
@@ -217,7 +225,9 @@ public class Bestiary {
                             HTML.Row(HTML.Cell("Armour:", "cellPhys"), HTML.Cell("0", id: "arm"), HTML.Cell("Fire Resistance:", "cellFire"), HTML.Cell("0", id: "fire")),
                             HTML.Row(HTML.Cell("Evasion:", "cellDex"), HTML.Cell("0", id: "eva"), HTML.Cell("Cold Resistance:", "cellCold"), HTML.Cell("0", id: "cold")),
                             HTML.Row(HTML.Cell("Energy Shield:", "cellInt"), HTML.Cell("0", id: "es"), HTML.Cell("Lightning Resistance:", "cellLight"), HTML.Cell("0", id: "lightning")),
-                            HTML.Row("", "", HTML.Cell("Chaos Resistance:", "cellChaos"), HTML.Cell("0", id: "chaos")) //"Damage Mult:", damageMult
+                            HTML.Row("", "", HTML.Cell("Chaos Resistance:", "cellChaos"), HTML.Cell("0", id: "chaos")), //"Damage Mult:", damageMult
+                            HTML.Row("Damage Mult:", damageMult, "Damage Spread", damageSpread) //"Damage Mult:", damageMult
+
                         ),
                         HTML.Break(),
                         HTML.TableClass("block", CreateMonsterModRows(monsterVariety)),
@@ -481,7 +491,7 @@ public class Bestiary {
 
         float baseEffectiveness = statSet["BaseEffectiveness"].GetPrimitive<float>();
         float incrementalEffectiveness = statSet["IncrementalEffectiveness"].GetPrimitive<float>();
-        //html.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
+        html.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
 
         DatReference[] floatStats = grantedEffectStatsPerLevel["FloatStats"].GetReferenceArray();
         float[] floatStatValues = grantedEffectStatsPerLevel["FloatStatsValues"].GetPrimitiveArray<float>();

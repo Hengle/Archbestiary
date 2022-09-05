@@ -20,7 +20,8 @@ class History {
             if (hideVersionName) version = version.Substring(0, version.LastIndexOf('.'));
             monsterCounts[version] = 0;
             DatFileIndex dats = new DatFileIndex(new DiskDirectory(Path.Combine(dir, "ROOT/Data")), spec);
-            foreach(DatRow row in dats["MonsterVarieties.dat"]) {
+            string datName = dats.ContainsKey("MonsterVarieties.dat64") ? "MonsterVarieties.dat64" : "MonsterVarieties.dat";
+            foreach (DatRow row in dats[datName]) {
                 string monster = row["Id"].GetString().TrimEnd('_');
                 prevMonsters.Remove(monster);
                 if (!added.ContainsKey(monster)) { added[monster] = version; monsterCounts[version] = monsterCounts[version] + 1; }
