@@ -21,9 +21,9 @@ public class Bestiary {
     //ListPacks();
     //return;
 
-    public Bestiary() {
-        spec = DatSpecIndex.Create(@"E:\Anna\Downloads\schema.min(5).json");
-        dats = new DatFileIndex(new DiskDirectory(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Data\"), spec);
+    public Bestiary(string path = @"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Data\", string schema = @"E:\Anna\Downloads\schema.min(5).json") {
+        spec = DatSpecIndex.Create(schema);
+        dats = new DatFileIndex(new DiskDirectory(path), spec);
     }
 
     //CreateMonsterList();

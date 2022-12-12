@@ -6,6 +6,16 @@ using System.Text;
 
 static class Scripts {
 
+    public static void UniqueList(Bestiary b, int start = 1346) {
+        for (int i = start; i < b.dats["UniqueStashLayout.dat64"].RowCount; i++) {
+            DatRow unique = b.dats["UniqueStashLayout.dat64"][i];
+            string name = unique["WordsKey"].GetReference().GetReferencedRow()["Text"].GetString();
+            string icon = unique["ItemVisualIdentityKey"].GetReference().GetReferencedRow()["DDSFile"].GetString();
+            string type = unique["UniqueStashTypesKey"].GetReference().GetReferencedRow().GetID();
+            Console.WriteLine($"|{i}|{name}|||{type}||||{icon}");
+        }
+    }
+
     public static void ActiveSkillTypes(Bestiary b) {
         //Console.Write(";;");
         //for(int i = 0; i < b.dats["ActiveSkillType.dat64"].RowCount; i++) {
