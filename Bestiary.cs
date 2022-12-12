@@ -5,6 +5,7 @@ using PoeSharp.Filetypes.Dat.Specification;
 using System.Text;
 using Archbestiary.Util;
 using PoeTerrain;
+using System.Runtime.InteropServices;
 
 public class Bestiary {
     Dictionary<int, DatRow> grantedEffectPerLevelsMax;
@@ -22,7 +23,7 @@ public class Bestiary {
 
     public Bestiary() {
         spec = DatSpecIndex.Create(@"E:\Anna\Downloads\schema.min(5).json");
-        dats = new DatFileIndex(new DiskDirectory(@"F:\Extracted\PathOfExile\3.19.Kalandra\ROOT\Data\"), spec);
+        dats = new DatFileIndex(new DiskDirectory(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Data\"), spec);
     }
 
     //CreateMonsterList();
@@ -195,7 +196,7 @@ public class Bestiary {
             //<tr><td colspan=""4"">{ListReferenceArrayIds(monsterVariety["TagsKeys"].GetReferenceArray())}</td></tr>
 
             string[] aos = monsterVariety["AOFiles"].GetStringArray();
-            string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(@"E:\Extracted\PathOfExile\3.18.Sentinel\" + aos[ao]);
+            string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\" + aos[ao]);
             for (int ao = 0; ao < aos.Length; ao++) aos[ao] = aos[ao].Replace("Metadata/", "");
             for (int rig = 0; rig < rigs.Length; rig++) rigs[rig] = rigs[rig].Replace("Art/Models/", "");
 
@@ -231,7 +232,7 @@ public class Bestiary {
                         ),
                         HTML.Break(),
                         HTML.TableClass("block", CreateMonsterModRows(monsterVariety)),
-                        CreateGrantedEffectTables(monsterVariety, onUpdate)
+                        CreateGrantedEffectTables(monsterVariety, onUpdate, damageMult, damageSpread)
                     ),
                     HTML.Array(
 
@@ -250,7 +251,7 @@ public class Bestiary {
 
             html.WriteLine(
 @"<script type=""module"">
-    import {SetStats, SetDamage, SetDot} from ""./_Util.js"";
+    import {SetStats, SetDamage, SetDot, SetAttack} from ""./_Util.js"";
     let slider = document.getElementById(""levelSlide"");
     function Update() {
 ");
@@ -432,12 +433,12 @@ public class Bestiary {
     }
 
 
-    string CreateGrantedEffectTables(DatRow monsterVariety, List<string> onUpdate) {
+    string CreateGrantedEffectTables(DatRow monsterVariety, List<string> onUpdate, int damageMult, int damageSpread) {
         DatReference[] refs = monsterVariety["GrantedEffectsKeys"].GetReferenceArray();
         if (refs is null) return "";
         StringBuilder effectTables = new StringBuilder();
         for (int i = 0; i < refs.Length; i++) {
-            effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex, onUpdate));
+            effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex, onUpdate, damageMult, damageSpread));
         }
         return effectTables.ToString();
     }
@@ -465,7 +466,7 @@ public class Bestiary {
         "base_lightning_damage_to_deal_per_minute",
         "base_chaos_damage_to_deal_per_minute",
     };
-    string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate) {
+    string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate, int damageMult = 100, int damageSpread = 20) {
         float[] damageValues = new float[10];
 
 
@@ -492,6 +493,19 @@ public class Bestiary {
         float baseEffectiveness = statSet["BaseEffectiveness"].GetPrimitive<float>();
         float incrementalEffectiveness = statSet["IncrementalEffectiveness"].GetPrimitive<float>();
         html.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
+
+        //base damage (for attacks)
+        foreach (DatReference contextFlagRef in activeSkill["VirtualStatContextFlags"].GetReferenceArray()) 
+            if(contextFlagRef.RowIndex == 2) {
+                int attackMult = (10000 + grantedEffectStatsPerLevel["BaseMultiplier"] + 50) / 100;
+                int damageEffectiveness = (10000 + grantedEffectStatsPerLevel["DamageEffectiveness"] + 50) / 100;
+                html.AppendLine(HTML.Row(HTML.Cell($"Attack Damage: {attackMult}% of base", "statDamage")));
+                html.AppendLine(HTML.Row(HTML.Cell($"Damage Effectiveness: {damageEffectiveness}% of base", "statDamage")));
+                html.AppendLine(HTML.Row(HTML.Cell("A", "statDamage", $"{row}_a")));
+                onUpdate.Add(@$"		SetAttack(""{row}_a"", slider.value, {damageMult}, {damageSpread}, {attackMult});");
+                break;
+            }
+
 
         DatReference[] floatStats = grantedEffectStatsPerLevel["FloatStats"].GetReferenceArray();
         float[] floatStatValues = grantedEffectStatsPerLevel["FloatStatsValues"].GetPrimitiveArray<float>();
@@ -570,7 +584,7 @@ public class Bestiary {
 
     string GetRigFromAO(string path) {
         //super hacky
-        if (!File.Exists(path)) return "COULD NOT FIND RIG";
+        if (!File.Exists(path)) return "COULD NOT FIND " + path;
         foreach (string line in File.ReadAllLines(path)) {
             if (line.Contains("metadata =")) {
                 return line.Substring(line.IndexOf('"')).Trim('"');
@@ -592,6 +606,21 @@ public class Bestiary {
 
 
     string GetSkillDamageTypes(DatRow activeSkill) {
+        HashSet<int> activeSkillTypes = new HashSet<int>();
+        foreach (var activeSkillType in activeSkill["ActiveSkillTypes"].GetReferenceArray()) 
+            activeSkillTypes.Add(activeSkillType.RowIndex);
+        StringBuilder s = new StringBuilder();
+        if (activeSkillTypes.Contains(0)) s.Append("Attack, ");
+        if (activeSkillTypes.Contains(1)) s.Append("Spell, ");
+        if (activeSkillTypes.Contains(2)) s.Append("Projectile, ");
+        if (activeSkillTypes.Contains(7)) s.Append("Area, ");
+        if (s.Length > 0) { 
+            s.Remove(s.Length - 2, 2); 
+            return s.ToString(); 
+        } return null;
+
+
+        /*
         HashSet<int> contextFlags = new HashSet<int>();
         foreach (DatReference contextFlagRef in activeSkill["VirtualStatContextFlags"].GetReferenceArray()) contextFlags.Add(contextFlagRef.RowIndex);
         StringBuilder s = new StringBuilder();
@@ -605,6 +634,7 @@ public class Bestiary {
         }
         if (s.Length > 0) { s.Remove(s.Length - 1, 1); return s.ToString(); }
         return null;
+        */
     }
 
 

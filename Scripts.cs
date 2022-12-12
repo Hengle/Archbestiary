@@ -1,7 +1,128 @@
-﻿using ImageMagick;
+﻿using Archbestiary.Util;
+using ImageMagick;
 using PoeSharp.Filetypes.Dat;
+using System;
+using System.Text;
 
 static class Scripts {
+
+    public static void ActiveSkillTypes(Bestiary b) {
+        //Console.Write(";;");
+        //for(int i = 0; i < b.dats["ActiveSkillType.dat64"].RowCount; i++) {
+        //    Console.Write(b.dats["ActiveSkillType.dat64"][i].GetID() + ";");
+        //}
+        Console.WriteLine();
+        for (int i = 0; i < b.dats["ActiveSkills.dat64"].RowCount; i++) {
+            DatRow activeSkill = b.dats["ActiveSkills.dat64"][i];
+            HashSet<int> activeSkillTypes = new HashSet<int>();
+            foreach (var activeSkillType in activeSkill["ActiveSkillTypes"].GetReferenceArray()) activeSkillTypes.Add(activeSkillType.RowIndex);
+
+            HashSet<int> contextFlags = new HashSet<int>();
+            foreach (DatReference contextFlagRef in activeSkill["VirtualStatContextFlags"].GetReferenceArray()) contextFlags.Add(contextFlagRef.RowIndex);
+            if (activeSkillTypes.Contains(0) && !contextFlags.Contains(2)) Console.WriteLine(activeSkill.GetID() + " NO ATTACK CONTEXTFLAG");
+            if (!activeSkillTypes.Contains(0) && contextFlags.Contains(2)) Console.WriteLine(activeSkill.GetID() + " no skill type");
+        }
+    }
+
+    public static void UniqueArt(Bestiary b) {
+        for (int i = 0; i < b.dats["UniqueStashLayout.dat64"].RowCount; i++) {
+            DatRow unique = b.dats["UniqueStashLayout.dat64"][i];
+            DatRow visualIdentity = unique["ItemVisualIdentityKey"].GetReference().GetReferencedRow();
+            string name = unique["WordsKey"].GetReference().GetReferencedRow()["Text"].GetStringNoNull();
+            string type = unique["UniqueStashTypesKey"].GetReference().GetReferencedRow().GetID();
+            string mesh1 = visualIdentity["AOFile"].GetStringNoNull();
+            string mesh2 = visualIdentity["AOFile2"].GetStringNoNull();
+            string[] skinnedMeshes = visualIdentity["MarauderSMFiles"].GetStringArray();
+            string skinnedMesh = skinnedMeshes.Length > 0 ? skinnedMeshes[0] : "";
+            string effect = visualIdentity["EPKFile"].GetStringNoNull();
+            Console.WriteLine($"{i}|{name}|{type}|{mesh1}|{mesh2}|{skinnedMesh}|{effect}");
+        }
+    }
+
+    public static void UniqueArt2(Bestiary b) {
+        HashSet<string> baseAO = new HashSet<string>(File.ReadAllLines(@"E:\Anna\Anna\Visual Studio\Archbestiary\bin\Debug\net6.0\basebases.txt"));
+        for (int i = 0; i < b.dats["UniqueStashLayout.dat64"].RowCount; i++) {
+
+            List<string> aoFiles = new List<string>();
+
+            DatRow unique = b.dats["UniqueStashLayout.dat64"][i];
+            DatRow visualIdentity = unique["ItemVisualIdentityKey"].GetReference().GetReferencedRow();
+            string name = unique["WordsKey"].GetReference().GetReferencedRow()["Text"].GetStringNoNull();
+            string type = unique["UniqueStashTypesKey"].GetReference().GetReferencedRow().GetID();
+
+
+            string mesh1 = visualIdentity["AOFile"].GetStringNoNull(); if (mesh1.EndsWith(".ao") || mesh1.EndsWith(".epk")) aoFiles.Add(mesh1);
+            string mesh2 = visualIdentity["AOFile2"].GetStringNoNull(); if (mesh2.EndsWith(".ao") || mesh2.EndsWith(".epk")) aoFiles.Add(mesh2);
+            string epk = visualIdentity["EPKFile"].GetStringNoNull(); if (epk.EndsWith(".ao") || epk.EndsWith(".epk")) aoFiles.Add(epk);
+
+            string[] marauderFiles = visualIdentity["MarauderSMFiles"].GetStringArray();
+            foreach (string s in marauderFiles) if (s.EndsWith(".ao")) aoFiles.Add(s);
+            string[] smFiles = visualIdentity["SMFiles"].GetStringArray();
+            foreach (string s in smFiles) if (s.EndsWith(".ao")) aoFiles.Add(s);
+
+
+            Console.Write($"{i}|{name}|{type}|");
+            foreach (string s in aoFiles) {
+                if(!baseAO.Contains(s))
+                //if (s.EndsWith("Drop.ao") && aoFiles.Count > 1) continue;
+                Console.Write(s + "|");
+            }
+            Console.WriteLine();
+        }
+    }
+    public static void BaseArt2(Bestiary b) {
+        for (int i = 0; i < b.dats["BaseItemTypes.dat64"].RowCount; i++) {
+            DatRow baseItem = b.dats["BaseItemTypes.dat64"][i];
+
+            List<string> aoFiles = new List<string>();
+            DatRow visualIdentity = baseItem["ItemVisualIdentity"].GetReference().GetReferencedRow();
+            string name = baseItem["Name"].GetStringNoNull();
+            string type = baseItem["ItemClassesKey"].GetReference().GetReferencedRow().GetID();
+
+            string mesh1 = visualIdentity["AOFile"].GetStringNoNull(); if (mesh1.EndsWith(".ao")) aoFiles.Add(mesh1);
+            string mesh2 = visualIdentity["AOFile2"].GetStringNoNull(); if (mesh2.EndsWith(".ao")) aoFiles.Add(mesh2);
+            string epk = visualIdentity["EPKFile"].GetStringNoNull(); if (epk.EndsWith(".epk")) aoFiles.Add(epk);
+
+            string[] marauderFiles = visualIdentity["MarauderSMFiles"].GetStringArray();
+            foreach (string s in marauderFiles) if (s.EndsWith(".ao")) aoFiles.Add(s);
+            string[] smFiles = visualIdentity["SMFiles"].GetStringArray();
+            foreach (string s in smFiles) if (s.EndsWith(".ao")) aoFiles.Add(s);
+
+
+            Console.Write($"{type}|{baseItem.GetID()}|{i}|{name}|");
+            foreach (string s in aoFiles) {
+                //if (s.EndsWith("Drop.ao") && aoFiles.Count > 1) continue;
+                Console.Write(s + "|");
+            }
+            Console.WriteLine();
+        }
+    }
+    public static void BaseArt(Bestiary b) {
+        for (int i = 0; i < b.dats["BaseItemTypes.dat64"].RowCount; i++) {
+            DatRow baseItem = b.dats["BaseItemTypes.dat64"][i];
+            string id = baseItem["Id"].GetStringNoNull();
+            string name = baseItem["Name"].GetStringNoNull();
+            DatRow visualIdentity = baseItem["ItemVisualIdentity"].GetReference().GetReferencedRow();
+            List<string> aoFiles = new List<string>();
+
+            DatRow unique = b.dats["UniqueStashLayout.dat64"][i];
+
+            string mesh1 = visualIdentity["AOFile"].GetStringNoNull(); if (mesh1.EndsWith(".ao")) aoFiles.Add(mesh1);
+            string mesh2 = visualIdentity["AOFile2"].GetStringNoNull(); if (mesh2.EndsWith(".ao")) aoFiles.Add(mesh2);
+
+            string[] marauderFiles = visualIdentity["MarauderSMFiles"].GetStringArray();
+            foreach (string s in marauderFiles) if (s.EndsWith(".ao")) aoFiles.Add(s);
+            string[] smFiles = visualIdentity["SMFiles"].GetStringArray();
+            foreach (string s in smFiles) if (s.EndsWith(".ao")) aoFiles.Add(s);
+
+            //Console.Write($"{i}|{name}|{type}");
+            foreach (string s in aoFiles) {
+                //if (s.EndsWith("Drop.ao") && aoFiles.Count > 1) continue;
+                Console.Write(s + "|");
+            }
+            Console.WriteLine();
+        }
+    }
 
     public static void ListMonsterColumns(Bestiary b) {
         var monsterDef = b.spec["MonsterVarieties"];

@@ -31,6 +31,11 @@ export function SetDamage(id, level, base, incremental, min, max, type) {
     document.getElementById(id).innerHTML = "Deals " + Math.round(mult * min) + " to " + Math.round(mult * max) + damageTypes[type] + " Damage";
 }
 
+export function SetAttack(id, level, damageMult, damageSpread, effectMult) {
+	let mult = damagePerLevel[level - 1] * damageMult * effectMult / 10000;
+	document.getElementById(id).innerHTML = "Physical Damage: " + Math.round(mult * (100 - damageSpread) / 100) + "-" + Math.round(mult * (100 + damageSpread) / 100);
+}
+
 export function SetDot(id, level, base, incremental, val, type) {
     let mult = (globalBase + globalIncrement * (level - 1)) * base * Math.pow(1 + incremental, level - 1) / 0.06;
     document.getElementById(id).innerHTML = "Deals " + Math.round(mult * val / 6)/10 + damageTypes[type] + " Damage per Second";

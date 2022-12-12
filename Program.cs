@@ -11,6 +11,8 @@ class Program {
         //History.BuildMonsterVarietyHistory();
 
         Bestiary b = new Bestiary();
+        //Scripts.ActiveSkillTypes(b); return;
+        //Scripts.UniqueArt2(b); return;
 
         /*
         Scripts.ListMonsterColumns(b);
@@ -21,8 +23,8 @@ class Program {
         Scripts.ListMonster(b, 59); // oaks devoted
         */
         //Scripts.MonsterBaseStats(b); return;
-        //b.CreateMonsterList(); return;
-        //b.CreateMonsterPages(); return;
+        b.CreateMonsterList();
+        b.CreateMonsterPages(); return;
 
 
 
