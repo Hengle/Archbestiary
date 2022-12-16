@@ -6,6 +6,22 @@ using System.Text;
 
 static class Scripts {
 
+    public static void ListMonsterRigs(Bestiary b) {
+        for (int i = 0; i < b.dats["MonsterVarieties.dat64"].RowCount; i++) {
+            DatRow monster = b.dats["MonsterVarieties.dat64"][i];
+            DatReference monsterType = monster["MonsterTypesKey"].GetReference();
+            string monsterTypeId = monsterType.GetReferencedRow()["Id"].GetString();
+            string monsterId = monster["Id"].GetString();
+
+            foreach (string ao in monster["AOFiles"].GetStringArray()) {
+                string rig = b.GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", ao);
+                Console.WriteLine($"{monsterType.RowIndex}@{monsterTypeId}@{i}@{monsterId}@{ao}@{rig}");
+                break;
+            }
+        }
+    }
+
+
     public static void UniqueList(Bestiary b, int start = 1346) {
         for (int i = start; i < b.dats["UniqueStashLayout.dat64"].RowCount; i++) {
             DatRow unique = b.dats["UniqueStashLayout.dat64"][i];
@@ -496,19 +512,7 @@ void ListUsedAOs() {
 
 }
 
-void ListMonsterRigs() {
-    for(int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
-        DatRow monster = dats["MonsterVarieties.dat"][i];
-        DatReference monsterType = monster["MonsterTypesKey"].GetReference();
-        string monsterTypeId = monsterType.GetReferencedRow()["Id"].GetString();
-        string monsterId = monster["Id"].GetString();
 
-        foreach (string ao in monster["AOFiles"].GetStringArray()) {
-            string rig = GetRigFromAO(Path.Combine(@"E:\Extracted\PathOfExile\3.18.Sentinel", ao));
-            Console.WriteLine($"{monsterType.RowIndex}@{monsterTypeId}@{i}@{monsterId}@{ao}@{rig}");
-        }
-    }
-}
 
 static void ListPacks() {
     Dictionary<string, List<string>> packs = new Dictionary<string, List<string>>();

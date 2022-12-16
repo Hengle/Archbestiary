@@ -196,7 +196,7 @@ public class Bestiary {
             //<tr><td colspan=""4"">{ListReferenceArrayIds(monsterVariety["TagsKeys"].GetReferenceArray())}</td></tr>
 
             string[] aos = monsterVariety["AOFiles"].GetStringArray();
-            string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\" + aos[ao]);
+            string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\", aos[ao]);
             for (int ao = 0; ao < aos.Length; ao++) aos[ao] = aos[ao].Replace("Metadata/", "");
             for (int rig = 0; rig < rigs.Length; rig++) rigs[rig] = rigs[rig].Replace("Art/Models/", "");
 
@@ -582,15 +582,28 @@ public class Bestiary {
     }
 
 
-    string GetRigFromAO(string path) {
+    public string GetRigFromAO(string metadatafolder, string path) {
         //super hacky
-        if (!File.Exists(path)) return "COULD NOT FIND " + path;
-        foreach (string line in File.ReadAllLines(path)) {
+        string combined = Path.Combine(metadatafolder, path);
+        if (!File.Exists(combined)) return "COULD NOT FIND " + combined;
+        string rig = null;
+        string parent = null;
+        foreach (string line in File.ReadAllLines(combined)) {
+            if(line.StartsWith("extends \"")) {
+                parent = line.Split('"')[1];
+            }
+
             if (line.Contains("metadata =")) {
-                return line.Substring(line.IndexOf('"')).Trim('"');
+                rig = line.Substring(line.IndexOf('"')).Trim('"');
+                break;
             }
         }
-        return "COULD NOT FIND RIG";
+        if(rig == null && parent != null) {
+            if (parent != null) rig = GetRigFromAO(metadatafolder, parent + ".ao");
+            else rig = "COULD NOT FIND RIG";
+        }
+
+        return rig;
     }
 
     string[] GetAttatchmentsFromAo(string path) {
