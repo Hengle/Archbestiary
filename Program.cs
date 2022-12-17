@@ -11,7 +11,7 @@ class Program {
         //History.BuildMonsterVarietyHistory();
 
         Bestiary b = new Bestiary();
-        Scripts.ListMonsterRigs(b); return;
+        Scripts.ListIdles(); return;
 
         //Scripts.ActiveSkillTypes(b); return;
         //Scripts.UniqueArt2(b); return;

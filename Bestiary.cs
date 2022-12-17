@@ -582,7 +582,7 @@ public class Bestiary {
     }
 
 
-    public string GetRigFromAO(string metadatafolder, string path) {
+    public static string GetRigFromAO(string metadatafolder, string path) {
         //super hacky
         string combined = Path.Combine(metadatafolder, path);
         if (!File.Exists(combined)) return "COULD NOT FIND " + combined;

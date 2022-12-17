@@ -14,6 +14,7 @@ class History {
         DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemamin.txt");
         
         foreach (string dir in Directory.EnumerateDirectories(@"F:\Extracted\PathOfExile")) {
+            if (!char.IsNumber(Path.GetFileName(dir)[0])) continue;
             HashSet<string> prevMonsters = new HashSet<string>(added.Keys);
             string version = Path.GetFileName(dir);
             if (!char.IsDigit(version[0])) continue;

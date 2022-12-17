@@ -6,16 +6,56 @@ using System.Text;
 
 static class Scripts {
 
+    public static void ListUnusedRigs() {
+        HashSet<string> rigs = new HashSet<string>(Directory.EnumerateFiles(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Art\Models", "*.amd", SearchOption.AllDirectories));
+        Console.WriteLine("RIG LIST CREATED");
+        foreach(string ao in Directory.EnumerateFiles(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Metadata\", "*.ao", SearchOption.AllDirectories)) {
+            string rig = Bestiary.GetRigFromAO("", ao);
+            if (!rig.StartsWith("COULD NOT")) {
+                string combined = Path.Combine(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\", rig).Replace('/', '\\');
+                if(rigs.Contains(combined)) {
+                    //Console.WriteLine(combined);
+                    rigs.Remove(combined);
+                }
+            }
+        }
+        Console.WriteLine("\r\n\r\n\r\n\r\n\r\nUNUSED");
+        foreach (string rig in rigs) Console.WriteLine(rig);
+    }
+
+    public static void ListIdles() {
+        string folder = @"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Art\Models\";
+        List<string> idles = new List<string>();
+        foreach (string rig in Directory.EnumerateFiles(folder, "*.amd", SearchOption.AllDirectories)) {
+            idles.Clear();
+            foreach (string line in File.ReadAllLines(rig)) {
+                if (line.Contains("idle", StringComparison.InvariantCultureIgnoreCase)) idles.Add(line);
+            }
+            if(idles.Count > 1) {
+                Console.Write(rig.Substring(folder.Length, rig.Length - folder.Length) + " ");
+                foreach (string idle in idles) Console.Write(idle + " ");
+                Console.WriteLine();
+            }
+        }
+
+    }
+
     public static void ListMonsterRigs(Bestiary b) {
+        var history = History.BuildMonsterVarietyHistory();
+
         for (int i = 0; i < b.dats["MonsterVarieties.dat64"].RowCount; i++) {
             DatRow monster = b.dats["MonsterVarieties.dat64"][i];
             DatReference monsterType = monster["MonsterTypesKey"].GetReference();
             string monsterTypeId = monsterType.GetReferencedRow()["Id"].GetString();
-            string monsterId = monster["Id"].GetString();
+            bool summoned = monsterType.GetReferencedRow()["IsSummoned"].GetPrimitive<bool>();
+            string monsterId = monster["Id"].GetString().TrimEnd('_');
+            string monsterName = monster["Name"].GetString();
+            string version = history.ContainsKey(monsterId) ? history[monsterId] : "unk";
+            
 
             foreach (string ao in monster["AOFiles"].GetStringArray()) {
-                string rig = b.GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", ao);
-                Console.WriteLine($"{monsterType.RowIndex}@{monsterTypeId}@{i}@{monsterId}@{ao}@{rig}");
+                string rig = Bestiary.GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", ao);
+                Console.WriteLine($"{version}@{monsterType.RowIndex}@{summoned}@{monsterTypeId}@{i}@{monsterId}@{monsterName}@{ao}@{rig}");
                 break;
             }
         }
