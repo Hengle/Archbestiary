@@ -48,14 +48,19 @@ class History {
             string version = Path.GetFileName(dir);
             if (!char.IsDigit(version[0])) continue;
             foreach (string dat in Directory.EnumerateFiles(Path.Combine(dir, "ROOT/Data"), "*.dat")) {
-                string datname = Path.GetFileName(dat);
+                string datname = Path.GetFileNameWithoutExtension(dat);
                 prevDats.Remove(datname);
                 if(!added.ContainsKey(datname)) added[datname] = version;
+            }
+            foreach (string dat in Directory.EnumerateFiles(Path.Combine(dir, "ROOT/Data"), "*.dat64")) {
+                string datname = Path.GetFileNameWithoutExtension(dat);
+                prevDats.Remove(datname);
+                if (!added.ContainsKey(datname)) added[datname] = version;
             }
             foreach (string removedDat in prevDats) if(!removed.ContainsKey(removedDat)) removed[removedDat] = version;
         }
         foreach (string dat in added.Keys) {
-            if (removed.ContainsKey(dat)) Console.WriteLine($"{added[dat]} - {removed[dat]}|{dat}");
+            if (removed.ContainsKey(dat)) ; //Console.WriteLine($"{added[dat]} - {removed[dat]}|{dat}");
             else Console.WriteLine(added[dat] + "|" + dat);
         }
 

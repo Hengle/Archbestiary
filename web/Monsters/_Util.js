@@ -41,3 +41,12 @@ export function SetDot(id, level, base, incremental, val, type) {
     document.getElementById(id).innerHTML = "Deals " + Math.round(mult * val / 6)/10 + damageTypes[type] + " Damage per Second";
 }
 
+export function SetCooldown(id, level, levelReqs, storedUses, cooldowns) {
+	let tier = 0;
+	for(let i = 1; i < levelReqs.length; i++) {
+		if(levelReqs[i] < level) tier = i;
+	}
+	if(storedUses[tier] > 1) document.getElementById(id).innerHTML = "Cooldown Time: " + cooldowns[tier] / 1000 + " Sec (" + storedUses[tier] + " Uses)";
+	else                     document.getElementById(id).innerHTML = "Cooldown Time: " + cooldowns[tier] / 1000 + " Sec";
+}
+

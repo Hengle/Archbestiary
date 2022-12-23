@@ -10,7 +10,16 @@ class Program {
     public static void Main(string[] args) {
         //History.BuildMonsterVarietyHistory();
 
+        //History.DatHistory(); return;
+
+        
+
         Bestiary b = new Bestiary();
+        b.CreateMonsterPages(); return;
+
+        b.BuildStatSetPerLevels(b.dats); return;
+
+        Scripts.ListDatRowCounts(b); return;
         Scripts.ListIdles(); return;
 
         //Scripts.ActiveSkillTypes(b); return;
@@ -26,7 +35,6 @@ class Program {
         */
         //Scripts.MonsterBaseStats(b); return;
         b.CreateMonsterList();
-        b.CreateMonsterPages(); return;
 
 
 

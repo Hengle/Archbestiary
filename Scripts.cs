@@ -6,6 +6,16 @@ using System.Text;
 
 static class Scripts {
 
+    public static void ListDatRowCounts(Bestiary b) {
+        foreach (DatFile dat in b.dats.Values) {
+            if(dat.Name.Contains("Abyss")) Console.WriteLine(dat.Name);
+            continue;
+            if (dat.Name.EndsWith(".dat64"))
+                Console.WriteLine($"{dat.RowCount}|{dat.Name}");
+        }
+    }
+
+
     public static void ListUnusedRigs() {
         HashSet<string> rigs = new HashSet<string>(Directory.EnumerateFiles(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Art\Models", "*.amd", SearchOption.AllDirectories));
         Console.WriteLine("RIG LIST CREATED");
@@ -599,12 +609,6 @@ static void ListPacks() {
         return s.ToString();
     }
 
-    static void ListDatRowCounts() {
-        foreach (DatFile dat in dats.Values) {
-            if (dat.Name.EndsWith(".dat"))
-                Console.WriteLine($"{dat.RowCount}|{dat.Name}");
-        }
-    }
 
     static void ListSkillContextFlags() {
         foreach (DatRow activeSkill in dats["ActiveSkills.dat"]) {

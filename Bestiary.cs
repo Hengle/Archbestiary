@@ -6,10 +6,11 @@ using System.Text;
 using Archbestiary.Util;
 using PoeTerrain;
 using System.Runtime.InteropServices;
+using System.Data;
 
 public class Bestiary {
-    Dictionary<int, DatRow> grantedEffectPerLevelsMax;
-    Dictionary<int, DatRow> grantedStatSetPerLevelsMax;
+    Dictionary<int, List<DatRow>> grantedEffectPerLevels;
+    Dictionary<int, List<DatRow>> grantedStatSetPerLevelsMax;
     Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
     //DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
     //DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
@@ -21,7 +22,7 @@ public class Bestiary {
     //ListPacks();
     //return;
 
-    public Bestiary(string path = @"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Data\", string schema = @"E:\Anna\Downloads\schema.min(5).json") {
+    public Bestiary(string path = @"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Data\", string schema = @"E:\Anna\Downloads\schema.min(7).json") {
         spec = DatSpecIndex.Create(schema);
         dats = new DatFileIndex(new DiskDirectory(path), spec);
     }
@@ -143,7 +144,7 @@ public class Bestiary {
             if (r is not null) summonMonsters[row["Id"].GetPrimitive<int>()] = r;
         }
 
-        grantedEffectPerLevelsMax = BuildEffectPerLevels(dats);
+        grantedEffectPerLevels = BuildEffectPerLevels(dats);
         grantedStatSetPerLevelsMax = BuildStatSetPerLevels(dats);
 
         for (int monsterVarietyRow = 1; monsterVarietyRow < dats["MonsterVarieties.dat64"].RowCount; monsterVarietyRow++) {
@@ -251,7 +252,7 @@ public class Bestiary {
 
             html.WriteLine(
 @"<script type=""module"">
-    import {SetStats, SetDamage, SetDot, SetAttack} from ""./_Util.js"";
+    import {SetStats, SetDamage, SetDot, SetAttack, SetCooldown} from ""./_Util.js"";
     let slider = document.getElementById(""levelSlide"");
     function Update() {
 ");
@@ -383,6 +384,8 @@ public class Bestiary {
             else summonedSpecificMonstersIds[row["Id"].GetPrimitive<int>()] = monsterRef.RowIndex;
         }
 
+
+        /* TODO per level stats properly
         var perLevels = BuildEffectPerLevels(dats);
         for (int varietyRow = 0; varietyRow < dats["MonsterVarieties.dat64"].RowCount; varietyRow++) {
             DatRow variety = dats["MonsterVarieties.dat64"][varietyRow];
@@ -408,6 +411,7 @@ public class Bestiary {
 
             }
         }
+        */
 
         return monsterRelations;
     }
@@ -466,42 +470,108 @@ public class Bestiary {
         "base_lightning_damage_to_deal_per_minute",
         "base_chaos_damage_to_deal_per_minute",
     };
-    string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate, int damageMult = 100, int damageSpread = 20) {
+    string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate, int damageMult = 100, int damageSpread = 20, bool debug = true) {
         float[] damageValues = new float[10];
 
 
-        StringBuilder html = new StringBuilder();
-        DatReference rSkill = grantedEffect["ActiveSkill"].GetReference();
-        if (rSkill is null) {
-            Console.WriteLine(grantedEffect["Id"].GetString() + " Has no active skill");
-            return "";
+        StringBuilder w = new StringBuilder();
+
+
+        w.AppendLine("<br/><table class=\"block\">");
+        w.AppendLine(HTML.Row(HTML.Cell($"<h4>{grantedEffect.GetID()} ({row})</h4>", "cellGem")));
+        w.AppendLine(HTML.Row(HTML.Cell($"Cast Time: {grantedEffect["CastTime"].GetPrimitive<int>()}")));
+
+
+        //ActiveSkill
+        {
+            if(debug) w.AppendLine(HTML.Row(HTML.Cell("ActiveSkill", "cellFire")));
+            DatReference rSkill = grantedEffect["ActiveSkill"].GetReference();
+            DatRow activeSkill = rSkill.GetReferencedRow();
+            int skillId = rSkill.RowIndex;
+            string skillName = activeSkill.GetID();
+            string damageType = GetSkillDamageTypes(activeSkill);
+            if (damageType is not null)
+                w.AppendLine($"<tr><td>{skillName} ({skillId}) - {damageType}</td></tr>");
+            else
+                w.AppendLine($"<tr><td>{skillName} ({skillId})</td></tr>");
+
         }
-        DatRow activeSkill = rSkill.GetReferencedRow();
-        string grantedEffectName = grantedEffect["Id"].GetString(); string skillName = activeSkill["Id"].GetString();
-        DatRow grantedEffectPerLevel = grantedEffectPerLevelsMax[row];
-        DatRow statSet = grantedEffect["StatSet"].GetReference().GetReferencedRow();
-        DatRow grantedEffectStatsPerLevel = grantedStatSetPerLevelsMax[grantedEffect["StatSet"].GetReference().RowIndex];
 
-        html.AppendLine("<br/><table class=\"block\">");
-        html.AppendLine($"<tr><td class=\"cellGem\"><h4>{grantedEffectName} ({row})</h4></td></tr>");
-        string damageType = GetSkillDamageTypes(activeSkill);
-        if (damageType is not null)
-            html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex}) - {damageType}</td></tr>");
-        else
-            html.AppendLine($"<tr><td>{skillName} ({rSkill.RowIndex})</td></tr>");
 
-        float baseEffectiveness = statSet["BaseEffectiveness"].GetPrimitive<float>();
-        float incrementalEffectiveness = statSet["IncrementalEffectiveness"].GetPrimitive<float>();
-        html.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
+        //GrantedEffectStatSets
+        {
+            if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSet", "cellFire")));
+            DatRow statSet = grantedEffect["StatSet"].GetReference().GetReferencedRow();
+            float baseEffectiveness = statSet["BaseEffectiveness"].GetPrimitive<float>();
+            float incrementalEffectiveness = statSet["IncrementalEffectiveness"].GetPrimitive<float>();
+            w.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
+            DatReference[] constantStats = statSet["ConstantStats"].GetReferenceArray();
+            int[] constantStatValues = statSet["ConstantStatsValues"].GetPrimitiveArray<int>();
+            for (int stat = 0; stat < constantStats.Length; stat++) {
+                w.AppendLine($"<tr><td class=\"statConst\">{GetStatDescription(constantStats[stat].GetReferencedRow(), constantStatValues[stat])}</td></tr>");
+            }
+            foreach (DatReference staticStatRef in statSet["ImplicitStats"].GetReferenceArray()) {
+                w.AppendLine($"<tr><td class=\"statTag\">{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>");
+            }
+        }
+
+
+        //GrantedEffectsPerLevel
+        {
+
+            if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectsPerLevel", "cellFire")));
+
+            var levels = grantedEffectPerLevels[row];
+
+            int attackSpeedMult = levels[0].GetInt("AttackSpeedMultiplier");  //technically changes for like 3 things
+            w.AppendLine(HTML.RowList("Attack Speed Mult: " + attackSpeedMult.ToString()));
+
+
+            int cooldownGroup = levels[0].GetInt("CooldownGroup");  //technically changes for like 1 thing but I think its a bug
+            List<int> levelReqs = new List<int>(); levelReqs.Add(levels[0].GetInt("PlayerLevelReq"));
+            List<int> storedUses = new List<int>(); storedUses.Add(levels[0].GetInt("StoredUses"));
+            List<int> cooldowns = new List<int>(); cooldowns.Add(levels[0].GetInt("Cooldown"));
+
+
+
+            for (int i = 1; i < levels.Count; i++) {
+                int newLevelReq = levels[i].GetInt("PlayerLevelReq");
+                int newStoredUses = levels[i].GetInt("StoredUses");
+                int newCooldown = levels[i].GetInt("Cooldown");
+                if(newStoredUses != storedUses[storedUses.Count - 1] || newCooldown != cooldowns[cooldowns.Count - 1]) {
+                    levelReqs.Add(newLevelReq); storedUses.Add(newStoredUses); cooldowns.Add(newCooldown);
+                }
+            }
+
+            for (int i = 0; i < storedUses.Count; i++)
+                if (storedUses[i] != 0) {
+                    if (levelReqs.Count > 1) {
+                        w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_c")));
+                        onUpdate.Add(@$"		SetCooldown(""{row}_c"", slider.value, {HTML.JSArray(levelReqs.ToArray())}, {HTML.JSArray(storedUses.ToArray())}, {HTML.JSArray(cooldowns.ToArray())});");
+                    } else {
+                        if (storedUses[0] > 1) w.AppendLine(HTML.Row(HTML.Cell($"Cooldown Time: {((float)cooldowns[0])/1000} sec ({storedUses[0]} uses)", "statTag")));
+                        else w.AppendLine(HTML.Row(HTML.Cell($"Cooldown Time: {((float)cooldowns[0]) / 1000} sec", "statTag")));
+                    }
+                    break;
+                }
+        
+        }
+
+        /*
+
+        DatRow grantedEffectPerLevel = grantedEffectPerLevels[row][0]; //TODO
+        DatRow grantedEffectStatsPerLevel = grantedStatSetPerLevelsMax[grantedEffect["StatSet"].GetReference().RowIndex][0];
+
+
 
         //base damage (for attacks)
         foreach (DatReference contextFlagRef in activeSkill["VirtualStatContextFlags"].GetReferenceArray()) 
             if(contextFlagRef.RowIndex == 2) {
                 int attackMult = (10000 + grantedEffectStatsPerLevel["BaseMultiplier"] + 50) / 100;
                 int damageEffectiveness = (10000 + grantedEffectStatsPerLevel["DamageEffectiveness"] + 50) / 100;
-                html.AppendLine(HTML.Row(HTML.Cell($"Attack Damage: {attackMult}% of base", "statDamage")));
-                html.AppendLine(HTML.Row(HTML.Cell($"Damage Effectiveness: {damageEffectiveness}% of base", "statDamage")));
-                html.AppendLine(HTML.Row(HTML.Cell("A", "statDamage", $"{row}_a")));
+                w.AppendLine(HTML.Row(HTML.Cell($"Attack Damage: {attackMult}% of base", "statDamage")));
+                w.AppendLine(HTML.Row(HTML.Cell($"Damage Effectiveness: {damageEffectiveness}% of base", "statDamage")));
+                w.AppendLine(HTML.Row(HTML.Cell("A", "statDamage", $"{row}_a")));
                 onUpdate.Add(@$"		SetAttack(""{row}_a"", slider.value, {damageMult}, {damageSpread}, {attackMult});");
                 break;
             }
@@ -518,10 +588,10 @@ public class Bestiary {
             } else {
                 damagestat = Array.IndexOf(dotStatIds, id);
                 if(damagestat != -1) {
-                    html.AppendLine($"<tr><td class=\"statDamage\"  id=\"{row}_d{damagestat}\">A</td></tr>");
+                    w.AppendLine($"<tr><td class=\"statDamage\"  id=\"{row}_d{damagestat}\">A</td></tr>");
                     onUpdate.Add($"        SetDot(\"{row}_d{damagestat}\", slider.value, {baseEffectiveness}, {incrementalEffectiveness}, {floatStatValues[stat]}, {damagestat});");
                 } else {
-                    html.AppendLine($"<tr><td  class=\"statFloat\">{floatStats[stat].GetReferencedRow().GetID()} {floatStatBaseValues[stat]} {floatStatValues[stat]}</td></tr>");
+                    w.AppendLine($"<tr><td  class=\"statFloat\">{floatStats[stat].GetReferencedRow().GetID()} {floatStatBaseValues[stat]} {floatStatValues[stat]}</td></tr>");
                 }
             }
             
@@ -531,7 +601,7 @@ public class Bestiary {
         //Damage Lines
         for(int i = 0; i < 10; i += 2) {
             if (damageValues[i] > 0 && damageValues[i+1] > 0) {
-                html.AppendLine($"<tr><td class=\"statDamage\"  id=\"{row}_{i/2}\">A</td></tr>");
+                w.AppendLine($"<tr><td class=\"statDamage\"  id=\"{row}_{i/2}\">A</td></tr>");
                 onUpdate.Add($"        SetDamage(\"{row}_{i / 2}\", slider.value, {baseEffectiveness}, {incrementalEffectiveness}, {damageValues[i]}, {damageValues[i + 1]}, {i / 2});");
             }
         }
@@ -539,20 +609,13 @@ public class Bestiary {
         DatReference[] perLevelStats = grantedEffectStatsPerLevel["AdditionalStats"].GetReferenceArray();
         int[] perLevelStatValues = grantedEffectStatsPerLevel["AdditionalStatsValues"].GetPrimitiveArray<int>();
         for (int stat = 0; stat < perLevelStats.Length; stat++) {
-            html.AppendLine($"<tr><td class=\"statLevel\">{perLevelStats[stat].GetReferencedRow().GetID()} {perLevelStatValues[stat]}</td></tr>");
+            w.AppendLine($"<tr><td class=\"statLevel\">{perLevelStats[stat].GetReferencedRow().GetID()} {perLevelStatValues[stat]}</td></tr>");
         }
+        */
 
-        DatReference[] constantStats = statSet["ConstantStats"].GetReferenceArray();
-        int[] constantStatValues = statSet["ConstantStatsValues"].GetPrimitiveArray<int>();
-        for (int stat = 0; stat < constantStats.Length; stat++) {
-            html.AppendLine($"<tr><td class=\"statConst\">{GetStatDescription(constantStats[stat].GetReferencedRow(), constantStatValues[stat])}</td></tr>");
-        }
 
-        foreach (DatReference staticStatRef in statSet["ImplicitStats"].GetReferenceArray()) {
-            html.AppendLine($"<tr><td class=\"statTag\">{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>");
-        }
-        html.Append("</table>");
-        return html.ToString();
+        w.Append("</table>");
+        return w.ToString();
     }
 
 
@@ -661,32 +724,52 @@ public class Bestiary {
 
 
 
-    Dictionary<int, DatRow> BuildEffectPerLevels(DatFileIndex dats) {
-        Dictionary<int, DatRow> effectPerLevels = new Dictionary<int, DatRow>();
+    public Dictionary<int, List<DatRow>> BuildEffectPerLevels(DatFileIndex dats) {
+        Dictionary<int, List<DatRow>> effectPerLevels = new Dictionary<int, List<DatRow>>();
 
         foreach (DatRow row in dats["GrantedEffectsPerLevel.dat64"]) {
+            int level = row["PlayerLevelReq"].GetPrimitive<int>();
             int grantedEffect = row["GrantedEffect"].GetReference().RowIndex;
-            if (!effectPerLevels.ContainsKey(grantedEffect)) effectPerLevels[grantedEffect] = row;
-            else {
-                if (row["Level"].GetPrimitive<int>() > effectPerLevels[grantedEffect]["Level"].GetPrimitive<int>()) effectPerLevels[grantedEffect] = row;
+            if (!effectPerLevels.ContainsKey(grantedEffect)) effectPerLevels[grantedEffect] = new List<DatRow>();
+            int insert = 0;
+            for(int i = 0; i < effectPerLevels[grantedEffect].Count; i++) {
+                int checkLevel = effectPerLevels[grantedEffect][i]["PlayerLevelReq"].GetPrimitive<int>();
+                if (level == checkLevel) { //higher level gem with same level requirement, only happens on player skills
+                    insert = -1;
+                    effectPerLevels[grantedEffect][i] = row;
+                    break;
+                } else if (checkLevel < level) insert++;
             }
+            if(insert >= 0) effectPerLevels[grantedEffect].Insert(insert, row);
         }
+
+
 
         return effectPerLevels;
     }
 
 
-    Dictionary<int, DatRow> BuildStatSetPerLevels(DatFileIndex dats) {
-        Dictionary<int, DatRow> statSetPerLevels = new Dictionary<int, DatRow>();
+    public Dictionary<int, List<DatRow>> BuildStatSetPerLevels(DatFileIndex dats) {
+        Dictionary<int, List<DatRow>> statSetPerLevels = new Dictionary<int, List<DatRow>>();
 
         foreach (DatRow row in dats["GrantedEffectStatSetsPerLevel.dat64"]) {
+            int level = row["PlayerLevelReq"].GetPrimitive<int>();
             int statSet = row["StatSet"].GetReference().RowIndex;
-            if (!statSetPerLevels.ContainsKey(statSet)) statSetPerLevels[statSet] = row;
-            else {
-                if (row["PlayerLevelReq"].GetPrimitive<int>() > statSetPerLevels[statSet]["PlayerLevelReq"].GetPrimitive<int>()) statSetPerLevels[statSet] = row;
+            if (!statSetPerLevels.ContainsKey(statSet)) statSetPerLevels[statSet] = new List<DatRow>();
+            int insert = 0;
+            for (int i = 0; i < statSetPerLevels[statSet].Count; i++) {
+                int checkLevel = statSetPerLevels[statSet][i]["PlayerLevelReq"].GetPrimitive<int>();
+                if (level == checkLevel) { //higher level gem with same level requirement, only happens on player skills
+                    insert = -1;
+                    statSetPerLevels[statSet][i] = row;
+                    break;
+                } else if (checkLevel < level) insert++;
             }
+            if (insert >= 0) statSetPerLevels[statSet].Insert(insert, row);
         }
+
         return statSetPerLevels;
+
     }
 }
 
