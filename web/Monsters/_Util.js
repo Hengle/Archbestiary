@@ -42,11 +42,19 @@ export function SetDot(id, level, base, incremental, val, type) {
 }
 
 export function SetCooldown(id, level, levelReqs, storedUses, cooldowns) {
-	let tier = 0;
-	for(let i = 1; i < levelReqs.length; i++) {
-		if(levelReqs[i] < level) tier = i;
-	}
+	let tier = 0; for(let i = 1; i < levelReqs.length; i++) { if(levelReqs[i] <= level) tier = i; }
 	if(storedUses[tier] > 1) document.getElementById(id).innerHTML = "Cooldown Time: " + cooldowns[tier] / 1000 + " Sec (" + storedUses[tier] + " Uses)";
 	else                     document.getElementById(id).innerHTML = "Cooldown Time: " + cooldowns[tier] / 1000 + " Sec";
 }
 
+export function SetLevelText(id, level, levelReqs, levelText) {
+	let tier = 0; for(let i = 1; i < levelReqs.length; i++) { if(levelReqs[i] <= level) tier = i; }
+	document.getElementById(id).innerHTML = levelText[tier];
+	document.getElementById(id).style.display = levelText[tier] == "" ? "none" : "table-cell";
+}
+
+export function SetLevelStat(id, level, stat, levelReqs, values) {
+	let tier = 0; for(let i = 1; i < levelReqs.length; i++) { if(levelReqs[i] <= level) tier = i; }
+	document.getElementById(id).innerHTML = stat + " " + values[tier];
+	document.getElementById(id).style.display = values[tier] == 887887 ? "none" : "table-cell";
+}

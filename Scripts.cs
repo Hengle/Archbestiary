@@ -6,6 +6,17 @@ using System.Text;
 
 static class Scripts {
 
+    public static void TestGrantedEffectStatInterpolations(Bestiary b) {
+        for (int i = 0; i < b.dats["GrantedEffectStatSetsPerLevel.dat64"].RowCount; i++) {
+            DatRow row = b.dats["GrantedEffectStatSetsPerLevel.dat64"][i];
+            int floatCount = row["FloatStats"].GetStringArray().Length;
+            int[] interpolations = row["StatInterpolations"].GetPrimitiveArray<int>();
+            for (int stat = 0; stat < floatCount; stat++) if (interpolations[stat] != 3) Console.WriteLine($"FLOAT STAT {interpolations[stat]}");
+            for (int stat = floatCount; stat < interpolations.Length; stat++) if (interpolations[stat] > 2) Console.WriteLine($"INT STAT {interpolations[stat]}");
+        }
+        return;
+    }
+
     public static void ListDatRowCounts(Bestiary b) {
         foreach (DatFile dat in b.dats.Values) {
             if(dat.Name.Contains("Abyss")) Console.WriteLine(dat.Name);

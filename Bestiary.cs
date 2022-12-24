@@ -10,7 +10,7 @@ using System.Data;
 
 public class Bestiary {
     Dictionary<int, List<DatRow>> grantedEffectPerLevels;
-    Dictionary<int, List<DatRow>> grantedStatSetPerLevelsMax;
+    Dictionary<int, List<DatRow>> grantedStatSetPerLevels;
     Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
     //DatSpecIndex spec = DatSpecIndex.Create(@"E:\Extracted\PathOfExile\3.18.Sentinel\schemaformatted.json");
     //DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
@@ -145,11 +145,12 @@ public class Bestiary {
         }
 
         grantedEffectPerLevels = BuildEffectPerLevels(dats);
-        grantedStatSetPerLevelsMax = BuildStatSetPerLevels(dats);
+        grantedStatSetPerLevels = BuildStatSetPerLevels(dats);
 
         for (int monsterVarietyRow = 1; monsterVarietyRow < dats["MonsterVarieties.dat64"].RowCount; monsterVarietyRow++) {
 
             List<string> onUpdate = new List<string>();
+            HashSet<string> usedFunctions = new HashSet<string>();
 
             var monsterVariety = dats["MonsterVarieties.dat64"][monsterVarietyRow];
             DatReference monsterTypeRef = monsterVariety["MonsterTypesKey"].GetReference();
@@ -180,6 +181,7 @@ public class Bestiary {
             int damageSpread = monsterType["DamageSpread"].GetPrimitive<int>();
 
             onUpdate.Add($"        SetStats(slider.value, {lifeMult}, {ailmentMult}, {armourMult}, {evasionMult}, {esMult}, {res});");
+            usedFunctions.Add("SetStats");
 
             string monsterID = monsterVariety["Id"].GetString();
             monsterID = monsterID.Replace("Metadata/Monsters/", "");
@@ -233,7 +235,7 @@ public class Bestiary {
                         ),
                         HTML.Break(),
                         HTML.TableClass("block", CreateMonsterModRows(monsterVariety)),
-                        CreateGrantedEffectTables(monsterVariety, onUpdate, damageMult, damageSpread)
+                        CreateGrantedEffectTables(monsterVariety, onUpdate, usedFunctions, damageMult, damageSpread)
                     ),
                     HTML.Array(
 
@@ -250,11 +252,15 @@ public class Bestiary {
                 )
             );
 
+            StringBuilder funcS = new StringBuilder();
+            foreach(string func in usedFunctions) funcS.Append(func + ", ");
+            funcS.Remove(funcS.Length - 2, 2);
+
             html.WriteLine(
-@"<script type=""module"">
-    import {SetStats, SetDamage, SetDot, SetAttack, SetCooldown} from ""./_Util.js"";
+$@"<script type=""module"">
+    import {{{funcS}}} from ""./_Util.js"";
     let slider = document.getElementById(""levelSlide"");
-    function Update() {
+    function Update() {{
 ");
             foreach (string line in onUpdate) html.WriteLine(line);
             html.WriteLine(
@@ -437,12 +443,12 @@ public class Bestiary {
     }
 
 
-    string CreateGrantedEffectTables(DatRow monsterVariety, List<string> onUpdate, int damageMult, int damageSpread) {
+    string CreateGrantedEffectTables(DatRow monsterVariety, List<string> onUpdate, HashSet<string> usedFunctions, int damageMult, int damageSpread) {
         DatReference[] refs = monsterVariety["GrantedEffectsKeys"].GetReferenceArray();
         if (refs is null) return "";
         StringBuilder effectTables = new StringBuilder();
         for (int i = 0; i < refs.Length; i++) {
-            effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex, onUpdate, damageMult, damageSpread));
+            effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex, onUpdate, usedFunctions, damageMult, damageSpread));
         }
         return effectTables.ToString();
     }
@@ -470,7 +476,7 @@ public class Bestiary {
         "base_lightning_damage_to_deal_per_minute",
         "base_chaos_damage_to_deal_per_minute",
     };
-    string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate, int damageMult = 100, int damageSpread = 20, bool debug = true) {
+    string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate, HashSet<string> usedFunctions, int damageMult = 100, int damageSpread = 20, bool debug = true) {
         float[] damageValues = new float[10];
 
 
@@ -548,6 +554,7 @@ public class Bestiary {
                     if (levelReqs.Count > 1) {
                         w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_c")));
                         onUpdate.Add(@$"		SetCooldown(""{row}_c"", slider.value, {HTML.JSArray(levelReqs.ToArray())}, {HTML.JSArray(storedUses.ToArray())}, {HTML.JSArray(cooldowns.ToArray())});");
+                        usedFunctions.Add("SetCooldown");
                     } else {
                         if (storedUses[0] > 1) w.AppendLine(HTML.Row(HTML.Cell($"Cooldown Time: {((float)cooldowns[0])/1000} sec ({storedUses[0]} uses)", "statTag")));
                         else w.AppendLine(HTML.Row(HTML.Cell($"Cooldown Time: {((float)cooldowns[0]) / 1000} sec", "statTag")));
@@ -555,6 +562,97 @@ public class Bestiary {
                     break;
                 }
         
+        }
+
+        //GrantedEffectStatSetsPerLevel
+        {
+            if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSetsPerLevel", "cellFire")));
+
+            int statSet = grantedEffect["StatSet"].GetReference().RowIndex;
+            var levels = grantedStatSetPerLevels[statSet];
+
+            //int spellCritChance = levels[0].GetInt("SpellCritChance");
+            //int baseMultiplier = levels[0].GetInt("BaseMultiplier"); changes for attacks only, does this mean its not used for spells or is that just because the scaling is already handled by effectiveness?
+            //FloatStats
+            //InterpolationBases - does not change
+            //AdditionalStats - changes size
+            //StatInterpolations - changes size
+            //FloatStatsValues - changes
+            //AdditionalStatsValues - changes size and values
+
+            List<int> additionalFlagLevels = new List<int>(); additionalFlagLevels.Add(levels[0].GetInt("PlayerLevelReq"));
+            List<string> additionalFlags = new List<string>(); additionalFlags.Add(levels[0].GetReferenceArrayIDsFormatted("AdditionalFlags"));
+
+
+
+
+            Dictionary<int, List<int>> intStatLevels = new Dictionary<int, List<int>>();
+            Dictionary<int, List<int>> intStatValues = new Dictionary<int, List<int>>();
+
+            {
+                var intStats = levels[0]["AdditionalStats"].GetReferenceArray();
+                var intValues = levels[0]["AdditionalStatsValues"].GetPrimitiveArray<int>();
+                for(int i = 0; i < intStats.Length; i++) {
+                    intStatLevels[intStats[i].RowIndex] = new List<int> { levels[0].GetInt("PlayerLevelReq") };
+                    intStatValues[intStats[i].RowIndex] = new List<int> { intValues[i] };
+                }
+
+            }
+
+
+            //string test = "BaseMultiplier";
+            for (int i = 1; i < levels.Count; i++) {
+                int level = levels[i].GetInt("PlayerLevelReq");
+
+
+                string newAdditionalFlags = levels[i].GetReferenceArrayIDsFormatted("AdditionalFlags");
+                if (newAdditionalFlags != additionalFlags[additionalFlags.Count - 1]) {
+                    additionalFlags.Add(newAdditionalFlags);
+                    additionalFlagLevels.Add(level);
+                }
+
+                var intStats = levels[i]["AdditionalStats"].GetReferenceArray();
+                var intValues = levels[i]["AdditionalStatsValues"].GetPrimitiveArray<int>();
+                for (int stat = 0; stat < intStats.Length; stat++) {
+
+                    int statIndex = intStats[stat].RowIndex;
+
+                    if (!intStatLevels.ContainsKey(statIndex)) {
+                        intStatLevels[statIndex] = new List<int>() { 0 };
+                        intStatValues[statIndex] = new List<int>() { 887887 }; //use as a "hide this" value
+                    }
+                    if (intStatValues[statIndex][intStatValues[statIndex].Count - 1] != intValues[stat]) {  //TODO if interpolation is 2 we need to keep all levels, including ones with the same value
+                        intStatLevels[statIndex].Add(level);
+                        intStatValues[statIndex].Add(intValues[stat]);
+                    }
+                }
+
+                //var oldVals = levels[i - 1]["AdditionalStatsValues"].GetPrimitiveArray<int>();
+                //var newVals = levels[i]["AdditionalStatsValues"].GetPrimitiveArray<int>();
+                //if(oldVals.Length != newVals.Length) Console.WriteLine($"CHANGESIZE {grantedEffect.GetID()} {string.Concat(oldVals)} {string.Concat(newVals)}");
+                //else for (int f = 0; f <  newVals.Length; f++) if (oldVals[f] != newVals[f]) Console.WriteLine($"{grantedEffect.GetID()} {newVals[f]} {oldVals[f]}");
+
+
+                //if (levels[i].GetInt(test) != levels[i - 1].GetInt(test)) Console.WriteLine($"{grantedEffect.GetID()} {test} {levels[i].GetInt(test)} {levels[i - 1].GetInt(test)}");
+            }
+
+
+            foreach (int statRow in intStatLevels.Keys) {
+                w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")));
+                onUpdate.Add(@$"		SetLevelStat(""{row}_{statRow}"", slider.value, ""{dats["Stats.dat64"][statRow].GetID()}"", {HTML.JSArray(intStatLevels[statRow].ToArray())}, {HTML.JSArray(intStatValues[statRow].ToArray())});");
+                usedFunctions.Add("SetLevelStat");
+            }
+
+
+            if (additionalFlags.Count == 1) {
+                if (additionalFlags[0] != "")
+                    Console.WriteLine("CONSTANT ADDITIONALFLAGS (THIS SHOULD NEVER HAPPEN)");
+            } else {
+                w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_f")));
+                onUpdate.Add(@$"		SetLevelText(""{row}_f"", slider.value, {HTML.JSArray(additionalFlagLevels.ToArray())}, {HTML.JSArray(additionalFlags.ToArray())});");
+                usedFunctions.Add("SetLevelText");
+            }
+
         }
 
         /*

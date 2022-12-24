@@ -141,11 +141,22 @@ namespace Archbestiary.Util {
 
         public static string JSArray(int[] array) {
             StringBuilder s = new StringBuilder("[");
-            for(int i = 0; i < array.Length; i++) {
-                s.Append(array[i]);
+            for (int i = 0; i < array.Length; i++) {
+                s.Append(array[i].ToString());
                 s.Append(", ");
             }
-            s.Remove(s.Length - 1, 1);
+            s.Remove(s.Length - 2, 2);
+            s.Append("]");
+            return s.ToString();
+        }
+
+        public static string JSArray(object[] array) {
+            StringBuilder s = new StringBuilder("[");
+            for(int i = 0; i < array.Length; i++) {
+                s.Append($"\"{array[i].ToString()}\"");
+                s.Append(", ");
+            }
+            s.Remove(s.Length - 2, 2);
             s.Append("]");
             return s.ToString();
         }

@@ -15,6 +15,11 @@ class Program {
         
 
         Bestiary b = new Bestiary();
+
+
+
+
+
         b.CreateMonsterPages(); return;
 
         b.BuildStatSetPerLevels(b.dats); return;
