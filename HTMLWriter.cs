@@ -150,6 +150,17 @@ namespace Archbestiary.Util {
             return s.ToString();
         }
 
+        public static string JSArray(float[] array) {
+            StringBuilder s = new StringBuilder("[");
+            for (int i = 0; i < array.Length; i++) {
+                s.Append(array[i].ToString());
+                s.Append(", ");
+            }
+            s.Remove(s.Length - 2, 2);
+            s.Append("]");
+            return s.ToString();
+        }
+
         public static string JSArray(object[] array) {
             StringBuilder s = new StringBuilder("[");
             for(int i = 0; i < array.Length; i++) {

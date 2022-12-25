@@ -505,12 +505,15 @@ $@"<script type=""module"">
 
 
         //GrantedEffectStatSets
+
+        
+        if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSet", "cellFire")));
+        DatRow statSet = grantedEffect["StatSet"].GetReference().GetReferencedRow();
+        float baseEffectiveness = statSet["BaseEffectiveness"].GetPrimitive<float>();
+        float incrementalEffectiveness = statSet["IncrementalEffectiveness"].GetPrimitive<float>();
+        w.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
+
         {
-            if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSet", "cellFire")));
-            DatRow statSet = grantedEffect["StatSet"].GetReference().GetReferencedRow();
-            float baseEffectiveness = statSet["BaseEffectiveness"].GetPrimitive<float>();
-            float incrementalEffectiveness = statSet["IncrementalEffectiveness"].GetPrimitive<float>();
-            w.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
             DatReference[] constantStats = statSet["ConstantStats"].GetReferenceArray();
             int[] constantStatValues = statSet["ConstantStatsValues"].GetPrimitiveArray<int>();
             for (int stat = 0; stat < constantStats.Length; stat++) {
@@ -568,17 +571,13 @@ $@"<script type=""module"">
         {
             if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSetsPerLevel", "cellFire")));
 
-            int statSet = grantedEffect["StatSet"].GetReference().RowIndex;
-            var levels = grantedStatSetPerLevels[statSet];
+            int statSetIndex = grantedEffect["StatSet"].GetReference().RowIndex;
+            var levels = grantedStatSetPerLevels[statSetIndex];
 
-            //int spellCritChance = levels[0].GetInt("SpellCritChance");
+            //int spellCritChance
             //int baseMultiplier = levels[0].GetInt("BaseMultiplier"); changes for attacks only, does this mean its not used for spells or is that just because the scaling is already handled by effectiveness?
-            //FloatStats
             //InterpolationBases - does not change
-            //AdditionalStats - changes size
             //StatInterpolations - changes size
-            //FloatStatsValues - changes
-            //AdditionalStatsValues - changes size and values
 
             List<int> additionalFlagLevels = new List<int>(); additionalFlagLevels.Add(levels[0].GetInt("PlayerLevelReq"));
             List<string> additionalFlags = new List<string>(); additionalFlags.Add(levels[0].GetReferenceArrayIDsFormatted("AdditionalFlags"));
@@ -600,6 +599,18 @@ $@"<script type=""module"">
             }
 
 
+            Dictionary<int, List<int>> floatStatLevels = new Dictionary<int, List<int>>();
+            Dictionary<int, List<float>> floatStatValues = new Dictionary<int, List<float>>();
+            {
+                var floatStats = levels[0]["FloatStats"].GetReferenceArray();
+                var floatValues = levels[0]["FloatStatsValues"].GetPrimitiveArray<float>();
+                for (int i = 0; i < floatStats.Length; i++) {
+                    floatStatLevels[floatStats[i].RowIndex] = new List<int> { levels[0].GetInt("PlayerLevelReq") };
+                    floatStatValues[floatStats[i].RowIndex] = new List<float> { floatValues[i] };
+                }
+
+            }
+
             //string test = "BaseMultiplier";
             for (int i = 1; i < levels.Count; i++) {
                 int level = levels[i].GetInt("PlayerLevelReq");
@@ -611,21 +622,36 @@ $@"<script type=""module"">
                     additionalFlagLevels.Add(level);
                 }
 
-                var intStats = levels[i]["AdditionalStats"].GetReferenceArray();
-                var intValues = levels[i]["AdditionalStatsValues"].GetPrimitiveArray<int>();
-                for (int stat = 0; stat < intStats.Length; stat++) {
+                {
+                    var intStats = levels[i]["AdditionalStats"].GetReferenceArray();
+                    var intValues = levels[i]["AdditionalStatsValues"].GetPrimitiveArray<int>();
+                    for (int stat = 0; stat < intStats.Length; stat++) {
 
-                    int statIndex = intStats[stat].RowIndex;
+                        int statIndex = intStats[stat].RowIndex;
 
-                    if (!intStatLevels.ContainsKey(statIndex)) {
-                        intStatLevels[statIndex] = new List<int>() { 0 };
-                        intStatValues[statIndex] = new List<int>() { 887887 }; //use as a "hide this" value
-                    }
-                    if (intStatValues[statIndex][intStatValues[statIndex].Count - 1] != intValues[stat]) {  //TODO if interpolation is 2 we need to keep all levels, including ones with the same value
-                        intStatLevels[statIndex].Add(level);
-                        intStatValues[statIndex].Add(intValues[stat]);
+                        if (!intStatLevels.ContainsKey(statIndex)) {
+                            intStatLevels[statIndex] = new List<int>() { 0 };
+                            intStatValues[statIndex] = new List<int>() { 887887 }; //use as a "hide this" value
+                        }
+                        if (intStatValues[statIndex][intStatValues[statIndex].Count - 1] != intValues[stat]) {  //TODO if interpolation is 2 we need to keep all levels, including ones with the same value
+                            intStatLevels[statIndex].Add(level);
+                            intStatValues[statIndex].Add(intValues[stat]);
+                        }
                     }
                 }
+
+
+                var floatStats = levels[i]["FloatStats"].GetReferenceArray();
+                var floatValues = levels[i]["FloatStatsValues"].GetPrimitiveArray<float>();
+                for (int stat = 0; stat < floatStats.Length; stat++) {
+                    int statIndex = floatStats[stat].RowIndex;
+                    if (!floatStatLevels.ContainsKey(statIndex))  Console.WriteLine("FLOAT STAT ADDED, THIS SHOULD NEVER HAPPEN");
+                    else if (floatStatValues[statIndex][floatStatValues[statIndex].Count - 1] != floatValues[stat]) {
+                        floatStatLevels[statIndex].Add(level);
+                        floatStatValues[statIndex].Add(floatValues[stat]);
+                    }
+                }
+
 
                 //var oldVals = levels[i - 1]["AdditionalStatsValues"].GetPrimitiveArray<int>();
                 //var newVals = levels[i]["AdditionalStatsValues"].GetPrimitiveArray<int>();
@@ -639,8 +665,14 @@ $@"<script type=""module"">
 
             foreach (int statRow in intStatLevels.Keys) {
                 w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")));
-                onUpdate.Add(@$"		SetLevelStat(""{row}_{statRow}"", slider.value, ""{dats["Stats.dat64"][statRow].GetID()}"", {HTML.JSArray(intStatLevels[statRow].ToArray())}, {HTML.JSArray(intStatValues[statRow].ToArray())});");
-                usedFunctions.Add("SetLevelStat");
+                onUpdate.Add(@$"		SetIntStat(""{row}_{statRow}"", slider.value, ""{dats["Stats.dat64"][statRow].GetID()}"", {HTML.JSArray(intStatLevels[statRow].ToArray())}, {HTML.JSArray(intStatValues[statRow].ToArray())});");
+                usedFunctions.Add("SetIntStat");
+            }
+
+            foreach(int statRow in floatStatLevels.Keys) {
+                w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")));
+                onUpdate.Add(@$"		SetFloatStat(""{row}_{statRow}"", slider.value, ""{dats["Stats.dat64"][statRow].GetID()}"", {HTML.JSArray(floatStatLevels[statRow].ToArray())}, {HTML.JSArray(floatStatValues[statRow].ToArray())}, {baseEffectiveness}, {incrementalEffectiveness});");
+                usedFunctions.Add("SetFloatStat");
             }
 
 

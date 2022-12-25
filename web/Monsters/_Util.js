@@ -53,8 +53,14 @@ export function SetLevelText(id, level, levelReqs, levelText) {
 	document.getElementById(id).style.display = levelText[tier] == "" ? "none" : "table-cell";
 }
 
-export function SetLevelStat(id, level, stat, levelReqs, values) {
+export function SetIntStat(id, level, stat, levelReqs, values) {
 	let tier = 0; for(let i = 1; i < levelReqs.length; i++) { if(levelReqs[i] <= level) tier = i; }
 	document.getElementById(id).innerHTML = stat + " " + values[tier];
 	document.getElementById(id).style.display = values[tier] == 887887 ? "none" : "table-cell";
+}
+
+export function SetFloatStat(id, level, stat,  levelReqs, values, base, incremental) {
+	let mult = (globalBase + globalIncrement * (level - 1)) * base * Math.pow(1 + incremental, level - 1);
+	let tier = 0; for(let i = 1; i < levelReqs.length; i++) { if(levelReqs[i] <= level) tier = i; }
+	document.getElementById(id).innerHTML = stat + " " + Math.round(values[tier] * mult);
 }
