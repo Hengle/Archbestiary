@@ -6,6 +6,24 @@ using System.Text;
 
 static class Scripts {
 
+    public static void SkillContextFlags(Bestiary b) {
+        int contextFlagCount = b.dats["VirtualStatContextFlags.dat64"].RowCount;
+        Console.Write("|");
+        for (int i = 0; i < contextFlagCount; i++) {
+            Console.Write(b.dats["VirtualStatContextFlags.dat64"][i].GetID() + "|");
+        }
+        Console.WriteLine();
+        for (int i = 0; i < b.dats["ActiveSkills.dat64"].RowCount; i++) {
+            DatRow skill = b.dats["ActiveSkills.dat64"][i];
+            HashSet<int> flags = new HashSet<int>();
+            foreach (DatReference flag in skill["VirtualStatContextFlags"].GetReferenceArray()) flags.Add(flag.RowIndex);
+
+            Console.Write($"{i}|{skill.GetID()}|");
+            for (int a = 0; a < contextFlagCount; a++) Console.Write(flags.Contains(a) ? "e|" : "|");
+            Console.WriteLine();
+        }
+    }
+
     public static void TestGrantedEffectStatInterpolations(Bestiary b) {
         for (int i = 0; i < b.dats["GrantedEffectStatSetsPerLevel.dat64"].RowCount; i++) {
             DatRow row = b.dats["GrantedEffectStatSetsPerLevel.dat64"][i];

@@ -476,7 +476,7 @@ $@"<script type=""module"">
         "base_lightning_damage_to_deal_per_minute",
         "base_chaos_damage_to_deal_per_minute",
     };
-    string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate, HashSet<string> usedFunctions, int damageMult = 100, int damageSpread = 20, bool debug = true) {
+    string CreateGrantedEffectHtml(DatRow grantedEffect, int row, List<string> onUpdate, HashSet<string> usedFunctions, int damageMult = 100, int damageSpread = 20, bool debug = false) {
         float[] damageValues = new float[10];
 
 
@@ -486,6 +486,8 @@ $@"<script type=""module"">
         w.AppendLine("<br/><table class=\"block\">");
         w.AppendLine(HTML.Row(HTML.Cell($"<h4>{grantedEffect.GetID()} ({row})</h4>", "cellGem")));
         w.AppendLine(HTML.Row(HTML.Cell($"Cast Time: {grantedEffect["CastTime"].GetPrimitive<int>()}")));
+
+        PriorityQueue<string, int> stats = new PriorityQueue<string, int>();
 
 
         //ActiveSkill
@@ -517,10 +519,11 @@ $@"<script type=""module"">
             DatReference[] constantStats = statSet["ConstantStats"].GetReferenceArray();
             int[] constantStatValues = statSet["ConstantStatsValues"].GetPrimitiveArray<int>();
             for (int stat = 0; stat < constantStats.Length; stat++) {
-                w.AppendLine($"<tr><td class=\"statConst\">{GetStatDescription(constantStats[stat].GetReferencedRow(), constantStatValues[stat])}</td></tr>");
+                stats.Enqueue($"<tr><td class=\"statConst\">{GetStatDescription(constantStats[stat].GetReferencedRow(), constantStatValues[stat])}</td></tr>", constantStats[stat].RowIndex);
             }
             foreach (DatReference staticStatRef in statSet["ImplicitStats"].GetReferenceArray()) {
-                w.AppendLine($"<tr><td class=\"statTag\">{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>");
+                stats.Enqueue($"<tr><td class=\"statTag\">{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>", staticStatRef.RowIndex);
+                w.AppendLine();
             }
         }
 
@@ -579,8 +582,16 @@ $@"<script type=""module"">
             //InterpolationBases - does not change
             //StatInterpolations - changes size
 
-            List<int> additionalFlagLevels = new List<int>(); additionalFlagLevels.Add(levels[0].GetInt("PlayerLevelReq"));
-            List<string> additionalFlags = new List<string>(); additionalFlags.Add(levels[0].GetReferenceArrayIDsFormatted("AdditionalFlags"));
+            int baseLevelReq = levels[0].GetInt("PlayerLevelReq"); //Do we need this for anything? I guess interpolation 2
+
+            List<int> spellCritLevels = new List<int>() { baseLevelReq };
+            List<int> spellCritValues = new List<int>() { levels[0].GetInt("SpellCritChance") };
+
+            List<int> baseMultiplierLevels = new List<int>() { baseLevelReq };
+            List<int> baseMultiplierValues = new List<int>() { levels[0].GetInt("BaseMultiplier") };
+
+            List<int> additionalFlagLevels = new List<int>() { baseLevelReq };
+            List<string> additionalFlags = new List<string>() { levels[0].GetReferenceArrayIDsFormatted("AdditionalFlags") };
 
 
 
@@ -592,7 +603,7 @@ $@"<script type=""module"">
                 var intStats = levels[0]["AdditionalStats"].GetReferenceArray();
                 var intValues = levels[0]["AdditionalStatsValues"].GetPrimitiveArray<int>();
                 for(int i = 0; i < intStats.Length; i++) {
-                    intStatLevels[intStats[i].RowIndex] = new List<int> { levels[0].GetInt("PlayerLevelReq") };
+                    intStatLevels[intStats[i].RowIndex] = new List<int> { baseLevelReq };
                     intStatValues[intStats[i].RowIndex] = new List<int> { intValues[i] };
                 }
 
@@ -605,7 +616,7 @@ $@"<script type=""module"">
                 var floatStats = levels[0]["FloatStats"].GetReferenceArray();
                 var floatValues = levels[0]["FloatStatsValues"].GetPrimitiveArray<float>();
                 for (int i = 0; i < floatStats.Length; i++) {
-                    floatStatLevels[floatStats[i].RowIndex] = new List<int> { levels[0].GetInt("PlayerLevelReq") };
+                    floatStatLevels[floatStats[i].RowIndex] = new List<int> { baseLevelReq };
                     floatStatValues[floatStats[i].RowIndex] = new List<float> { floatValues[i] };
                 }
 
@@ -615,6 +626,17 @@ $@"<script type=""module"">
             for (int i = 1; i < levels.Count; i++) {
                 int level = levels[i].GetInt("PlayerLevelReq");
 
+                int newCrit = levels[i].GetInt("SpellCritChance");
+                if(newCrit != spellCritValues[spellCritValues.Count - 1]) {
+                    spellCritLevels.Add(level);
+                    spellCritValues.Add(newCrit);
+                }
+
+                int newBaseMultiplier = levels[i].GetInt("BaseMultiplier");
+                if (newBaseMultiplier != baseMultiplierValues[baseMultiplierValues.Count - 1]) {
+                    baseMultiplierLevels.Add(level);
+                    baseMultiplierValues.Add(newBaseMultiplier);
+                }
 
                 string newAdditionalFlags = levels[i].GetReferenceArrayIDsFormatted("AdditionalFlags");
                 if (newAdditionalFlags != additionalFlags[additionalFlags.Count - 1]) {
@@ -662,20 +684,37 @@ $@"<script type=""module"">
                 //if (levels[i].GetInt(test) != levels[i - 1].GetInt(test)) Console.WriteLine($"{grantedEffect.GetID()} {test} {levels[i].GetInt(test)} {levels[i - 1].GetInt(test)}");
             }
 
+            if(spellCritValues.Count > 1) {
+                w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_s")));
+                onUpdate.Add(@$"		SetIntStat(""{row}_s"", slider.value, ""Spell Crit Chance: "", {HTML.JSArray(spellCritLevels.ToArray())}, {HTML.JSArray(spellCritValues.ToArray())});");
+            } else {
+                w.AppendLine(HTML.Row(HTML.Cell($"Spell Crit Chance: {spellCritValues[0]}")));
+            }
+
+
+            if (baseMultiplierValues.Count > 1) {
+                w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_m")));
+                onUpdate.Add(@$"		SetIntStat(""{row}_m"", slider.value, ""Base Multiplier: "", {HTML.JSArray(baseMultiplierLevels.ToArray())}, {HTML.JSArray(baseMultiplierValues.ToArray())});");
+            } else {
+                w.AppendLine(HTML.Row(HTML.Cell($"Base Multiplier: {baseMultiplierValues[0]}")));
+            }
+
 
             foreach (int statRow in intStatLevels.Keys) {
-                w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")));
+                stats.Enqueue(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")), statRow);
+                //w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")));
                 onUpdate.Add(@$"		SetIntStat(""{row}_{statRow}"", slider.value, ""{dats["Stats.dat64"][statRow].GetID()}"", {HTML.JSArray(intStatLevels[statRow].ToArray())}, {HTML.JSArray(intStatValues[statRow].ToArray())});");
                 usedFunctions.Add("SetIntStat");
             }
 
             foreach(int statRow in floatStatLevels.Keys) {
-                w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")));
+                stats.Enqueue(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")), statRow);
+                //w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")));
                 onUpdate.Add(@$"		SetFloatStat(""{row}_{statRow}"", slider.value, ""{dats["Stats.dat64"][statRow].GetID()}"", {HTML.JSArray(floatStatLevels[statRow].ToArray())}, {HTML.JSArray(floatStatValues[statRow].ToArray())}, {baseEffectiveness}, {incrementalEffectiveness});");
                 usedFunctions.Add("SetFloatStat");
             }
 
-
+            //TODO SPLIT TO PROPER STATS
             if (additionalFlags.Count == 1) {
                 if (additionalFlags[0] != "")
                     Console.WriteLine("CONSTANT ADDITIONALFLAGS (THIS SHOULD NEVER HAPPEN)");
@@ -742,6 +781,10 @@ $@"<script type=""module"">
             w.AppendLine($"<tr><td class=\"statLevel\">{perLevelStats[stat].GetReferencedRow().GetID()} {perLevelStatValues[stat]}</td></tr>");
         }
         */
+
+        while(stats.Count > 0) {
+            w.AppendLine(stats.Dequeue());
+        }
 
 
         w.Append("</table>");
