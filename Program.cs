@@ -12,10 +12,13 @@ class Program {
 
         //History.DatHistory(); return;
 
+        //Scripts.OTParent(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", @"Metadata\Monsters\LeagueSanctum\Boss\GargoyleBoss.ot"); return;
         
 
+
+         
         Bestiary b = new Bestiary();
-        Scripts.SkillContextFlags(b); return;
+        //Scripts.SkillContextFlags(b); return;
 
 
 

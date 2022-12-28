@@ -2,9 +2,27 @@
 using ImageMagick;
 using PoeSharp.Filetypes.Dat;
 using System;
+using System.Diagnostics;
 using System.Text;
 
 static class Scripts {
+
+    public static void OTParent(string basePath, string path) {
+        OTExpand(basePath, path, 0);
+    }
+
+    static void OTExpand(string basePath, string path, int indent) {
+        ObjectTemplate ot = new ObjectTemplate(basePath, path);
+        string indentString = new string(' ', indent);
+        Console.WriteLine(indentString + ot.path);
+        foreach (string stat in ot.stats.Keys) Console.WriteLine(indentString + stat + ": " + ot.stats[stat]);
+        Console.WriteLine();
+        foreach (string parent in ot.parents) OTExpand(basePath, parent, indent + 1);
+
+    }
+
+
+
 
     public static void SkillContextFlags(Bestiary b) {
         int contextFlagCount = b.dats["VirtualStatContextFlags.dat64"].RowCount;

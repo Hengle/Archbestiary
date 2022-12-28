@@ -16,7 +16,7 @@ public class Bestiary {
     //DatFileIndex dats = new DatFileIndex(new DiskDirectory(@"E:\Extracted\PathOfExile\3.18.Sentinel\Data\"), spec);
     public DatSpecIndex spec;
     public DatFileIndex dats;
-
+    Dictionary<string, ObjectTemplate> monsterOTs;
 
 
     //ListPacks();
@@ -125,6 +125,7 @@ public class Bestiary {
 
         var monsterLocations = BuildMonsterLocations();
         var monsterRelations = BuildMonsterRelations();
+        monsterOTs = new Dictionary<string, ObjectTemplate>();
 
         //SPECTRE OVERRIDES
         Dictionary<int, DatReference> spectreParents = new Dictionary<int, DatReference>();
@@ -234,7 +235,6 @@ public class Bestiary {
 
                         ),
                         HTML.Break(),
-                        HTML.TableClass("block", CreateMonsterModRows(monsterVariety)),
                         CreateGrantedEffectTables(monsterVariety, onUpdate, usedFunctions, damageMult, damageSpread)
                     ),
                     HTML.Array(
@@ -244,6 +244,10 @@ public class Bestiary {
                             HTML.Row("Obj:", ListStrings(aos)),
                             HTML.Row("Rig:", ListStrings(rigs))
                         ),
+                        HTML.Break(),
+                        HTML.TableClass("block", CreateMonsterModRows(monsterVariety)),
+                        HTML.Break(),
+                        CreateMonsterStatTable(monsterVariety),
                         HTML.Break(),
                         CreateMonsterRelationTable(monsterRelations, monsterVarietyRow),
                         HTML.Break(),
@@ -275,6 +279,7 @@ $@"<script type=""module"">
             if (monsterVarietyRow % 100 == 0) Console.WriteLine(monsterVarietyRow);
         }
     }
+
 
     Dictionary<int, List<string[]>> BuildMonsterLocations() {
         Dictionary<int, List<string[]>> monsterLocations = new Dictionary<int, List<string[]>>();
@@ -327,7 +332,6 @@ $@"<script type=""module"">
         foreach (int monster in monsterSpawners.Keys)
             foreach (string spawner in monsterSpawners[monster])
                 AddMonsterLocation(monsterLocations, monster, "Spawner", spawner);
-
 
         return monsterLocations;
     }
@@ -451,6 +455,52 @@ $@"<script type=""module"">
             effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex, onUpdate, usedFunctions, damageMult, damageSpread));
         }
         return effectTables.ToString();
+    }
+
+    string CreateMonsterStatTable(DatRow monster) {
+        List<string> stats = new List<string>();
+        List<string> statValues = new List<string>();
+        List<string> statSources = new List<string>();
+
+
+        //mods
+        foreach(DatReference modRef in monster["ModsKeys"].GetReferenceArray()) {
+            DatRow mod = modRef.GetReferencedRow();
+            for(int i = 1; i <= 6; i++) {
+                DatReference stat = mod[$"StatsKey{i}"].GetReference();
+                if (stat is null) continue;
+                int min = mod.GetInt($"Stat{i}Min"); int max = mod.GetInt($"Stat{i}Min");
+                stats.Add(stat.GetReferencedRow().GetID());
+                statValues.Add(min == max ? min.ToString() : $"{min}-{max}");
+                statSources.Add(mod.GetID());
+            }
+
+        }
+        
+
+        //.ot stats
+        string otPath = monster.GetString("BaseMonsterTypeIndex") + ".ot";
+        ExpandMonsterOT(otPath, stats, statValues, statSources);
+
+        string[] tableRows = new string[stats.Count];
+
+        for(int i = 0; i < stats.Count; i++) {
+            tableRows[i] = HTML.Row(stats[i], statValues[i], statSources[i]);
+        }
+        return HTML.TableClass("block", tableRows);
+
+    }
+
+    void ExpandMonsterOT(string otPath, List<string> stats, List<string> values, List<string> sources) {
+        if (otPath == "Metadata/Monsters/Monster.ot") return;
+        if (!monsterOTs.ContainsKey(otPath)) monsterOTs[otPath] = new ObjectTemplate(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", otPath);
+        var ot = monsterOTs[otPath];
+        foreach (string stat in ot.stats.Keys) {
+            stats.Add(stat);
+            values.Add(ot.stats[stat]);
+            sources.Add(ot.path.Substring(9, ot.path.Length - 9));
+        }
+        foreach (string parent in ot.parents) ExpandMonsterOT(parent, stats, values, sources);
     }
 
     string[] CreateMonsterModRows(DatRow monster) {

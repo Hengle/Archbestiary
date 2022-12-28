@@ -2,3 +2,4 @@
 /obj
 *.html
 /.vs
+/bin/Release/net6.0
