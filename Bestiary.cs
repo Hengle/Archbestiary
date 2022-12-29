@@ -535,11 +535,11 @@ $@"<script type=""module"">
 
         w.AppendLine("<br/><table class=\"block\">");
         w.AppendLine(HTML.Row(HTML.Cell($"<h4>{grantedEffect.GetID()} ({row})</h4>", "cellGem")));
-        w.AppendLine(HTML.Row(HTML.Cell($"Cast Time: {grantedEffect["CastTime"].GetPrimitive<int>()}")));
 
         PriorityQueue<string, int> stats = new PriorityQueue<string, int>();
 
-
+        bool isAttack = false;
+        bool isHit = false;
         //ActiveSkill
         {
             if(debug) w.AppendLine(HTML.Row(HTML.Cell("ActiveSkill", "cellFire")));
@@ -547,78 +547,71 @@ $@"<script type=""module"">
             DatRow activeSkill = rSkill.GetReferencedRow();
             int skillId = rSkill.RowIndex;
             string skillName = activeSkill.GetID();
-            string damageType = GetSkillDamageTypes(activeSkill);
-            if (damageType is not null)
-                w.AppendLine($"<tr><td>{skillName} ({skillId}) - {damageType}</td></tr>");
-            else
+            //string damageType = GetSkillDamageTypes(activeSkill);
+            //if (damageType is not null)
+            //    w.AppendLine($"<tr><td>{skillName} ({skillId}) - {damageType}</td></tr>");
+            //else
                 w.AppendLine($"<tr><td>{skillName} ({skillId})</td></tr>");
+            foreach(DatReference contextFlag in activeSkill["VirtualStatContextFlags"].GetReferenceArray()) {
+                if (contextFlag.RowIndex == 2) isAttack = true;
+                else if (contextFlag.RowIndex == 18) isHit = true;
+
+            }
 
         }
 
 
         //GrantedEffectStatSets
 
-        
+
         if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSet", "cellFire")));
         DatRow statSet = grantedEffect["StatSet"].GetReference().GetReferencedRow();
         float baseEffectiveness = statSet["BaseEffectiveness"].GetPrimitive<float>();
         float incrementalEffectiveness = statSet["IncrementalEffectiveness"].GetPrimitive<float>();
-        w.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
+        //w.AppendLine($"<tr><td>Effectiveness: {baseEffectiveness} {incrementalEffectiveness}</td></tr>");
 
         {
             DatReference[] constantStats = statSet["ConstantStats"].GetReferenceArray();
             int[] constantStatValues = statSet["ConstantStatsValues"].GetPrimitiveArray<int>();
             for (int stat = 0; stat < constantStats.Length; stat++) {
-                stats.Enqueue($"<tr><td class=\"statConst\">{GetStatDescription(constantStats[stat].GetReferencedRow(), constantStatValues[stat])}</td></tr>", constantStats[stat].RowIndex);
+                stats.Enqueue($"<tr><td>{GetStatDescription(constantStats[stat].GetReferencedRow(), constantStatValues[stat])}</td></tr>", constantStats[stat].RowIndex);
             }
             foreach (DatReference staticStatRef in statSet["ImplicitStats"].GetReferenceArray()) {
-                stats.Enqueue($"<tr><td class=\"statTag\">{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>", staticStatRef.RowIndex);
+                stats.Enqueue($"<tr><td>{staticStatRef.GetReferencedRow()["Id"].GetString()}</td></tr>", staticStatRef.RowIndex);
                 w.AppendLine();
             }
         }
 
 
         //GrantedEffectsPerLevel
-        {
-
-            if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectsPerLevel", "cellFire")));
-
-            var levels = grantedEffectPerLevels[row];
-
-            int attackSpeedMult = levels[0].GetInt("AttackSpeedMultiplier");  //technically changes for like 3 things
-            w.AppendLine(HTML.RowList("Attack Speed Mult: " + attackSpeedMult.ToString()));
-
-
-            int cooldownGroup = levels[0].GetInt("CooldownGroup");  //technically changes for like 1 thing but I think its a bug
-            List<int> levelReqs = new List<int>(); levelReqs.Add(levels[0].GetInt("PlayerLevelReq"));
-            List<int> storedUses = new List<int>(); storedUses.Add(levels[0].GetInt("StoredUses"));
-            List<int> cooldowns = new List<int>(); cooldowns.Add(levels[0].GetInt("Cooldown"));
-
-
-
-            for (int i = 1; i < levels.Count; i++) {
-                int newLevelReq = levels[i].GetInt("PlayerLevelReq");
-                int newStoredUses = levels[i].GetInt("StoredUses");
-                int newCooldown = levels[i].GetInt("Cooldown");
-                if(newStoredUses != storedUses[storedUses.Count - 1] || newCooldown != cooldowns[cooldowns.Count - 1]) {
-                    levelReqs.Add(newLevelReq); storedUses.Add(newStoredUses); cooldowns.Add(newCooldown);
-                }
-            }
-
-            for (int i = 0; i < storedUses.Count; i++)
-                if (storedUses[i] != 0) {
-                    if (levelReqs.Count > 1) {
-                        w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_c")));
-                        onUpdate.Add(@$"		SetCooldown(""{row}_c"", slider.value, {HTML.JSArray(levelReqs.ToArray())}, {HTML.JSArray(storedUses.ToArray())}, {HTML.JSArray(cooldowns.ToArray())});");
-                        usedFunctions.Add("SetCooldown");
-                    } else {
-                        if (storedUses[0] > 1) w.AppendLine(HTML.Row(HTML.Cell($"Cooldown Time: {((float)cooldowns[0])/1000} sec ({storedUses[0]} uses)", "statTag")));
-                        else w.AppendLine(HTML.Row(HTML.Cell($"Cooldown Time: {((float)cooldowns[0]) / 1000} sec", "statTag")));
-                    }
-                    break;
-                }
         
+
+        if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectsPerLevel", "cellFire")));
+
+        var effectPerLevels = grantedEffectPerLevels[row];
+
+        int attackSpeedMult = effectPerLevels[0].GetInt("AttackSpeedMultiplier");  //technically changes for like 3 things
+
+
+        int cooldownGroup = effectPerLevels[0].GetInt("CooldownGroup");  //technically changes for like 1 thing but I think its a bug
+        List<int> levelReqs = new List<int>(); levelReqs.Add(effectPerLevels[0].GetInt("PlayerLevelReq"));
+        List<int> storedUses = new List<int>(); storedUses.Add(effectPerLevels[0].GetInt("StoredUses"));
+        List<int> cooldowns = new List<int>(); cooldowns.Add(effectPerLevels[0].GetInt("Cooldown"));
+
+
+
+        for (int i = 1; i < effectPerLevels.Count; i++) {
+            int newLevelReq = effectPerLevels[i].GetInt("PlayerLevelReq");
+            int newStoredUses = effectPerLevels[i].GetInt("StoredUses");
+            int newCooldown = effectPerLevels[i].GetInt("Cooldown");
+            if(newStoredUses != storedUses[storedUses.Count - 1] || newCooldown != cooldowns[cooldowns.Count - 1]) {
+                levelReqs.Add(newLevelReq); storedUses.Add(newStoredUses); cooldowns.Add(newCooldown);
+            }
         }
+
+ 
+        
+        
 
         //GrantedEffectStatSetsPerLevel
         {
@@ -723,32 +716,54 @@ $@"<script type=""module"">
                         floatStatValues[statIndex].Add(floatValues[stat]);
                     }
                 }
-
-
-                //var oldVals = levels[i - 1]["AdditionalStatsValues"].GetPrimitiveArray<int>();
-                //var newVals = levels[i]["AdditionalStatsValues"].GetPrimitiveArray<int>();
-                //if(oldVals.Length != newVals.Length) Console.WriteLine($"CHANGESIZE {grantedEffect.GetID()} {string.Concat(oldVals)} {string.Concat(newVals)}");
-                //else for (int f = 0; f <  newVals.Length; f++) if (oldVals[f] != newVals[f]) Console.WriteLine($"{grantedEffect.GetID()} {newVals[f]} {oldVals[f]}");
-
-
-                //if (levels[i].GetInt(test) != levels[i - 1].GetInt(test)) Console.WriteLine($"{grantedEffect.GetID()} {test} {levels[i].GetInt(test)} {levels[i - 1].GetInt(test)}");
-            }
-
-            if(spellCritValues.Count > 1) {
-                w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_s")));
-                onUpdate.Add(@$"		SetIntStat(""{row}_s"", slider.value, ""Spell Crit Chance: "", {HTML.JSArray(spellCritLevels.ToArray())}, {HTML.JSArray(spellCritValues.ToArray())});");
-            } else {
-                w.AppendLine(HTML.Row(HTML.Cell($"Spell Crit Chance: {spellCritValues[0]}")));
             }
 
 
-            if (baseMultiplierValues.Count > 1) {
-                w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_m")));
-                onUpdate.Add(@$"		SetIntStat(""{row}_m"", slider.value, ""Base Multiplier: "", {HTML.JSArray(baseMultiplierLevels.ToArray())}, {HTML.JSArray(baseMultiplierValues.ToArray())});");
-            } else {
-                w.AppendLine(HTML.Row(HTML.Cell($"Base Multiplier: {baseMultiplierValues[0]}")));
+            //Cooldown
+            for (int i = 0; i < storedUses.Count; i++)
+                if (storedUses[i] != 0) {
+                    if (levelReqs.Count > 1) {
+                        w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_c")));
+                        //TODO FORMAT LEVELED COUNTDOWN
+                        onUpdate.Add(@$"		SetCooldown(""{row}_c"", slider.value, {HTML.JSArray(levelReqs.ToArray())}, {HTML.JSArray(storedUses.ToArray())}, {HTML.JSArray(cooldowns.ToArray())});");
+                        usedFunctions.Add("SetCooldown");
+                    } else {
+                        if (storedUses[0] > 1) w.AppendLine(HTML.Row(HTML.Cell($"<span class=\"statTag\">Cooldown Time:</span> {((float)cooldowns[0]) / 1000} sec ({storedUses[0]} uses)")));
+                        else w.AppendLine(HTML.Row(HTML.Cell($"<span class=\"statTag\">Cooldown Time:</span> {((float)cooldowns[0]) / 1000} sec")));
+                    }
+                    break;
+                }
+
+            //Cast Time
+            if (!isAttack) w.AppendLine(HTML.Row(HTML.Cell(string.Format("<span class=\"statTag\">Cast Time:</span> {0:F2} sec", ((float)grantedEffect["CastTime"].GetPrimitive<int>())/1000))));
+
+
+            //Spell crit
+            if (!isAttack && isHit) {
+                if (spellCritValues.Count > 1) {
+                    w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_s")));
+                    //TODO FORMAT LEVELED SPELL CRIT
+                    onUpdate.Add(@$"		SetIntStat(""{row}_s"", slider.value, ""Spell Crit Chance: "", {HTML.JSArray(spellCritLevels.ToArray())}, {HTML.JSArray(spellCritValues.ToArray())});");
+                } else {
+                    w.AppendLine(HTML.Row(HTML.Cell(string.Format("<span class=\"statTag\">Critical Strike Chance:</span> {0:F2}%", ((float)spellCritValues[0])/100))));
+                }
             }
 
+            //Attack Mult
+            if(isAttack) {
+                if (baseMultiplierValues.Count > 1) {
+                    w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_m")));
+                    //TODO FORMAT LEVELED ATTACK MULT
+                    onUpdate.Add(@$"		SetIntStat(""{row}_m"", slider.value, ""<span class=""statTag"">Attack Damage:</span> "", {HTML.JSArray(baseMultiplierLevels.ToArray())}, {HTML.JSArray(baseMultiplierValues.ToArray())});");
+                } else {
+                    w.AppendLine(HTML.Row(HTML.Cell($"<span class=\"statTag\">Attack Damage:</span> {((float)(baseMultiplierValues[0]/10))/10+100}% of Base")));
+                }
+            }
+
+            //Attack Speed
+            if (isAttack) w.AppendLine(HTML.RowList("<span class=\"statTag\">Attack Speed :</span> " + (100 + attackSpeedMult).ToString() + "% of Base"));
+
+            w.AppendLine(HTML.Row());
 
             foreach (int statRow in intStatLevels.Keys) {
                 stats.Enqueue(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_{statRow}")), statRow);
@@ -764,7 +779,6 @@ $@"<script type=""module"">
                 usedFunctions.Add("SetFloatStat");
             }
 
-            //TODO SPLIT TO PROPER STATS
             if (additionalFlags.Count == 1) {
                 if (additionalFlags[0] != "")
                     Console.WriteLine("CONSTANT ADDITIONALFLAGS (THIS SHOULD NEVER HAPPEN)");

@@ -42,14 +42,14 @@ public class ObjectTemplate {
 
             else if (token == "Stats") {
                 token = GetNextToken(); if(token != "{") {
-                    Console.WriteLine("Stats not followed by open bracket"); break;
+                    Console.WriteLine(path + " Stats not followed by open bracket"); break;
                 }
 
                 token = GetNextToken();
                 while(token != "}") {
                     string stat = token;
                     token = GetNextToken(); if (token != "=") {
-                        Console.WriteLine("Stat not followed by equals"); break;
+                        Console.WriteLine(path + " " + stat + " Stat not followed by equals"); break;
                     }
                     stats[stat] = GetNextToken();
                     token = GetNextToken();
@@ -100,7 +100,8 @@ public class ObjectTemplate {
 
         //single line comment
         if (c == '/' && ((char)reader.Peek()) == '/') {
-            Console.WriteLine("COMMENT " + reader.ReadLine());
+            reader.ReadLine();
+            //Console.WriteLine("COMMENT " + reader.ReadLine());
             return GetNextToken();
         }
 
