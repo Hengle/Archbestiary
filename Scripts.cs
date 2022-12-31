@@ -7,6 +7,85 @@ using System.Text;
 
 static class Scripts {
 
+    public static void GrantedEffectMonsterSkillShape(Bestiary b) {
+        Dictionary<int, int> geometryAttackShapes = new Dictionary<int, int>();
+        for (int i = 0; i < b.dats["GeometryAttack.dat64"].RowCount; i++) {
+            DatRow geom = b.dats["GeometryAttack.dat64"][i];
+            geometryAttackShapes[geom.GetInt("Id")] = geom.GetInt("MonsterSkillsShape");
+        }
+
+        Dictionary<int, int> geometryTriggerShapes = new Dictionary<int, int>();
+        for (int i = 0; i < b.dats["GeometryTrigger.dat64"].RowCount; i++) {
+            DatRow geom = b.dats["GeometryTrigger.dat64"][i];
+            geometryTriggerShapes[geom.GetInt("Id")] = geom.GetInt("MonsterSkillsShape");
+        }
+
+        HashSet<string> geometrySkillNames = new HashSet<string>(new string[] { "geometry_spell", "geometry_attack", "geometry_spell_channelled", "geometry_attack_channelled" });
+
+        for (int i = 0; i < b.dats["GrantedEffects.dat64"].RowCount; i++) {
+            DatRow effect = b.dats["GrantedEffects.dat64"][i];
+
+            DatReference skill = effect["ActiveSkill"].GetReference(); if (skill is null) continue;
+            string skillId = skill.GetReferencedRow().GetID();
+            int variation = effect.GetInt("Variation");
+
+            if (geometrySkillNames.Contains(skillId)) {
+                if (geometryAttackShapes.ContainsKey(variation)) Console.WriteLine($"{variation}|{skillId}|{effect.GetID()}|{geometryAttackShapes[variation]}");
+                else Console.WriteLine($"{variation}|{skillId}|{effect.GetID()}|MISSING GEOMETRYATTACK");
+            } else if(skillId == "geometry_trigger") {
+                if (geometryTriggerShapes.ContainsKey(variation)) Console.WriteLine($"{variation}|{skillId}|{effect.GetID()}|{geometryTriggerShapes[variation]}");
+                else Console.WriteLine($"{variation}|{skillId}|{effect.GetID()}|MISSING GEOMETRYTRIGGER");
+
+            }
+
+
+        }
+    }
+
+    public static void GrantedEffectExtraData(Bestiary b, params string[] activeSkills) {
+
+        if (activeSkills.Length == 0) activeSkills = new string[] { 
+            "geometry_spell", "geometry_attack", "geometry_spell_channelled", "geometry_attack_channelled", 
+            "geometry_trigger", "monster_mortar", "monster_mortar_attack", "execute_geal", "spawn_object", 
+            "move_daemon", "geometry_projectiles_spell", "execute_geal_no_los", "geometry_mortars_spell", 
+            "geometry_projectiles_attack", "effect_driven_spell", "effect_driven_attack", 
+            "geometry_projectiles_attack_channelled", "add_buff_to_target_triggered", "add_buff_to_target", 
+            "suicide_explosion", "trigger_beam", "expanding_pulse", "execute_corpse_geal", "single_ground_laser" 
+        };
+
+        HashSet<string> activeSkillSet = new HashSet<string>(activeSkills);
+
+        for (int i = 0; i < b.dats["GrantedEffects.dat64"].RowCount; i++) {
+            DatRow effect = b.dats["GrantedEffects.dat64"][i];
+
+            DatReference skill = effect["ActiveSkill"].GetReference(); if (skill is null) continue;
+            string id = skill.GetReferencedRow().GetID(); if (!activeSkillSet.Contains(id)) continue;
+
+            int variation = effect.GetInt("Variation");
+            Console.WriteLine($"{id}|{variation}|{effect.GetID()}");
+        }
+
+    }
+
+    public static void ActiveSkillBehaviorIndices(Bestiary b) {
+        Dictionary<string, int> skills = new Dictionary<string, int>();
+
+
+
+
+
+        for (int i = 0; i < b.dats["GrantedEffects.dat64"].RowCount; i++) {
+            DatRow effect = b.dats["GrantedEffects.dat64"][i];
+
+            DatReference skill = effect["ActiveSkill"].GetReference(); if (skill is null) continue;
+
+            string id = skill.GetReferencedRow().GetID();
+            int idx = effect.GetInt("Variation");
+            if (idx > 0 && (!skills.ContainsKey(id) || idx > skills[id])) skills[id] = idx;
+        }
+
+        foreach(string skill in skills.Keys) Console.WriteLine(skill + "|" + skills[skill].ToString());
+    }
     public static void OTParent(string basePath, string path) {
         OTExpand(basePath, path, 0);
     }

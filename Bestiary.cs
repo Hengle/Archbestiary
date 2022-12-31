@@ -17,14 +17,22 @@ public class Bestiary {
     public DatSpecIndex spec;
     public DatFileIndex dats;
     Dictionary<string, ObjectTemplate> monsterOTs;
+    string basePath;
 
 
     //ListPacks();
     //return;
 
-    public Bestiary(string path = @"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Data\", string schema = @"E:\Anna\Downloads\schema.min(7).json") {
+    public Bestiary(string path = @"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\", string schema = null) {
+        if(schema == null) 
+            for(int i = 100; i > 0; i--) 
+                if(File.Exists($@"E:\Anna\Downloads\schema.min({i}).json")) {
+                    schema = $@"E:\Anna\Downloads\schema.min({i}).json";
+                    break;
+                }
+        basePath = path;
         spec = DatSpecIndex.Create(schema);
-        dats = new DatFileIndex(new DiskDirectory(path), spec);
+        dats = new DatFileIndex(new DiskDirectory(Path.Combine(path, "Data")), spec);
     }
 
     //CreateMonsterList();
@@ -203,6 +211,8 @@ public class Bestiary {
             string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\", aos[ao]);
             for (int ao = 0; ao < aos.Length; ao++) aos[ao] = aos[ao].Replace("Metadata/", "");
             for (int rig = 0; rig < rigs.Length; rig++) rigs[rig] = rigs[rig].Replace("Art/Models/", "");
+            string aiText = File.ReadAllText(Path.Combine(basePath, monsterVariety.GetString("AISFile")));
+
 
             HTMLWriter html = new HTMLWriter(File.Open(@"E:\Anna\Anna\Visual Studio\Archbestiary\web\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", FileMode.Create));
             html.WriteLine("<link rel=\"stylesheet\" href=\"monster.css\"></link>");
@@ -251,7 +261,10 @@ public class Bestiary {
                         HTML.Break(),
                         CreateMonsterRelationTable(monsterRelations, monsterVarietyRow),
                         HTML.Break(),
-                        HTML.TableClass("block", HTML.Array(monsterLocations.ContainsKey(monsterVarietyRow) ? monsterLocations[monsterVarietyRow].ToHTMLTableFixedColumns(4) : null))
+                        HTML.TableClass("block", HTML.Array(monsterLocations.ContainsKey(monsterVarietyRow) ? monsterLocations[monsterVarietyRow].ToHTMLTableFixedColumns(4) : null)),
+                        HTML.Break(),
+                        HTML.TableClass("block", HTML.Row(monsterVariety.GetString("AISFile")),  HTML.Row(aiText))
+
                     )
                 )
             );

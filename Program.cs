@@ -19,7 +19,7 @@ class Program {
          
         Bestiary b = new Bestiary();
         //Scripts.SkillContextFlags(b); return;
-
+        Scripts.GrantedEffectMonsterSkillShape(b); return;
 
 
 
