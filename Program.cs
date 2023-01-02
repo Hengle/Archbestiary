@@ -13,17 +13,21 @@ class Program {
         //History.DatHistory(); return;
 
         //Scripts.OTParent(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", @"Metadata\Monsters\LeagueSanctum\Boss\GargoyleBoss.ot"); return;
-        
 
+        //Scripts.AOEffectDrivenEvents(); return;
 
          
         Bestiary b = new Bestiary();
+        //b.CreateMonsterList(); return;
+        b.CreateMonsterPages(); return;
+
+        Scripts.DumpGeometryTriggers(b); return;
+        Scripts.DumpDat(b, "GeometryAttack.dat64"); return;
+
         //Scripts.SkillContextFlags(b); return;
         Scripts.GrantedEffectMonsterSkillShape(b); return;
 
-
-
-        b.CreateMonsterPages(); return;
+        
 
         b.BuildStatSetPerLevels(b.dats); return;
 
@@ -42,7 +46,6 @@ class Program {
         Scripts.ListMonster(b, 59); // oaks devoted
         */
         //Scripts.MonsterBaseStats(b); return;
-        b.CreateMonsterList();
 
 
 

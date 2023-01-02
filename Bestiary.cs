@@ -39,8 +39,8 @@ public class Bestiary {
 
     public void CreateMonsterList() {
 
-        //Dictionary<string, string> monsterAdded = History.BuildMonsterVarietyHistory(true);
-        Dictionary<string, string> monsterAdded = new Dictionary<string, string>();
+        Dictionary<string, string> monsterAdded = History.BuildMonsterVarietyHistory(true);
+        //Dictionary<string, string> monsterAdded = new Dictionary<string, string>();
 
         StringBuilder html = new StringBuilder();
         html.AppendLine("<link rel=\"stylesheet\" href=\"index.css\"></link>");
@@ -90,11 +90,11 @@ public class Bestiary {
                 if (name.Length >= 35) name = name.Substring(0, 35);
                 html.AppendLine($"<tr><td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{name}</a></td>");
                 //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,lifeMult/100)}\" target=\"body\">{lifeMult}</a></td>");
-                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,(damageMult-50)/50)}\" target=\"body\">{damageMult}</a></td>");
-                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9, armourMult / 10)}\" target=\"body\">{armourMult}</a></td>");
-                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9, evasionMult / 10)}\" target=\"body\">{evasionMult}</a></td>");
-                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9, esMult / 10)}\" target=\"body\">{esMult}</a></td>");
-                //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{added}</a></td>");
+                //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9,(damageMult-50)/50)}\" target=\"body\">{damageMult}</a></td>");
+                //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9, armourMult / 10)}\" target=\"body\">{armourMult}</a></td>");
+                //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9, evasionMult / 10)}\" target=\"body\">{evasionMult}</a></td>");
+                //html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"m{Math.Min(9, esMult / 10)}\" target=\"body\">{esMult}</a></td>");
+                html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{added}</a></td>");
                 html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a></td></tr>");
             }
         }
@@ -767,7 +767,7 @@ $@"<script type=""module"">
                 if (baseMultiplierValues.Count > 1) {
                     w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_m")));
                     //TODO FORMAT LEVELED ATTACK MULT
-                    onUpdate.Add(@$"		SetIntStat(""{row}_m"", slider.value, ""<span class=""statTag"">Attack Damage:</span> "", {HTML.JSArray(baseMultiplierLevels.ToArray())}, {HTML.JSArray(baseMultiplierValues.ToArray())});");
+                    onUpdate.Add(@$"		SetIntStat(""{row}_m"", slider.value, ""<span class=\""statTag\"">Attack Damage:</span> "", {HTML.JSArray(baseMultiplierLevels.ToArray())}, {HTML.JSArray(baseMultiplierValues.ToArray())});");
                 } else {
                     w.AppendLine(HTML.Row(HTML.Cell($"<span class=\"statTag\">Attack Damage:</span> {((float)(baseMultiplierValues[0]/10))/10+100}% of Base")));
                 }

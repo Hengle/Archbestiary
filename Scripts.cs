@@ -7,6 +7,90 @@ using System.Text;
 
 static class Scripts {
 
+    public static void DumpGeometrySkills(Bestiary b) {
+
+        StringBuilder s = new StringBuilder("GrantedEffect|idx|");
+        foreach (var column in b.dats["GeometryAttack.dat64"].Spec.Columns) s.Append(column.Name + "|");
+        Console.WriteLine(s.ToString());
+
+
+        Dictionary<int, DatRow> geometryAttacks = new Dictionary<int, DatRow>();
+        for (int i = 0; i < b.dats["GeometryAttack.dat64"].RowCount; i++) {
+            DatRow geom = b.dats["GeometryAttack.dat64"][i];
+            geometryAttacks[geom.GetInt("Id")] = geom;
+        }
+
+
+
+        HashSet<string> geometrySkillNames = new HashSet<string>(new string[] { "geometry_spell", "geometry_attack", "geometry_spell_channelled", "geometry_attack_channelled" });
+
+
+        for (int i = 0; i < b.dats["GrantedEffects.dat64"].RowCount; i++) {
+            DatRow effect = b.dats["GrantedEffects.dat64"][i];
+
+            DatReference skill = effect["ActiveSkill"].GetReference(); if (skill is null) continue;
+            string skillId = skill.GetReferencedRow().GetID();
+            int variation = effect.GetInt("Variation");
+
+            if (geometrySkillNames.Contains(skillId) && geometryAttacks.ContainsKey(variation)) 
+                Console.WriteLine($"{effect.GetID()}|{geometryAttacks[variation].Dump()}");
+        }
+    }
+
+    public static void DumpGeometryTriggers(Bestiary b) {
+        using(TextWriter w = new StreamWriter(File.Open("geometrytriggers.txt", FileMode.Create))) {
+            StringBuilder s = new StringBuilder("GrantedEffect|idx|");
+            foreach (var column in b.dats["GeometryTrigger.dat64"].Spec.Columns) s.Append(column.Name + "|");
+            w.WriteLine(s.ToString());
+
+
+            Dictionary<int, DatRow> triggers = new Dictionary<int, DatRow>();
+            for (int i = 0; i < b.dats["GeometryTrigger.dat64"].RowCount; i++) {
+                DatRow geom = b.dats["GeometryTrigger.dat64"][i];
+                triggers[geom.GetInt("Id")] = geom;
+            }
+
+
+
+
+
+            for (int i = 0; i < b.dats["GrantedEffects.dat64"].RowCount; i++) {
+                DatRow effect = b.dats["GrantedEffects.dat64"][i];
+
+                DatReference skill = effect["ActiveSkill"].GetReference(); if (skill is null) continue;
+                string skillId = skill.GetReferencedRow().GetID();
+                int variation = effect.GetInt("Variation");
+
+                if (skillId == "geometry_trigger" && triggers.ContainsKey(variation))
+                    w.WriteLine($"{effect.GetID()}|{triggers[variation].Dump()}");
+            }
+
+        }
+
+    }
+
+
+
+    public static void DumpDat(Bestiary b, string filename) {
+        StringBuilder s = new StringBuilder("idx|");
+        foreach (var column in b.dats[filename].Spec.Columns) s.Append(column.Name + "|");
+        Console.WriteLine(s.ToString());
+        for (int i = 0; i < b.dats[filename].RowCount; i++) Console.WriteLine(b.dats[filename][i].Dump());
+    }
+
+    public static void AOEffectDrivenEvents() {
+        foreach(string path in Directory.EnumerateFiles(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Metadata", "*.ao", SearchOption.AllDirectories)) {
+            string text = File.ReadAllText(path);
+            int e = text.IndexOf("EffectDrivenEvent");
+            if (e != -1) {
+                Console.WriteLine(path);
+                Console.WriteLine(text.Substring(e, text.Length - e));
+                //ObjectTemplate.DumpTokens(path);
+                Console.WriteLine("\r\n\r\n\r\n");
+            }
+        }
+    }
+
     public static void GrantedEffectMonsterSkillShape(Bestiary b) {
         Dictionary<int, int> geometryAttackShapes = new Dictionary<int, int>();
         for (int i = 0; i < b.dats["GeometryAttack.dat64"].RowCount; i++) {

@@ -15,6 +15,14 @@ public class ObjectTemplate {
 
     public Dictionary<string, string> stats;
 
+    public static void DumpTokens(string path) {
+        TextReader reader = new StreamReader(path);
+        string token = GetNextToken(reader);
+        while(token is not null) {
+            Console.WriteLine(token);
+            token = GetNextToken(reader);
+        }
+    }
 
     public ObjectTemplate(string baseFolder, string path) {
 
@@ -22,37 +30,37 @@ public class ObjectTemplate {
         parents = new List<string>();
         stats = new Dictionary<string, string>();
 
-        reader = new StreamReader(File.OpenRead(Path.Combine(baseFolder, path)));
+        TextReader reader = new StreamReader(File.OpenRead(Path.Combine(baseFolder, path)));
 
-        string token = GetNextToken();
+        string token = GetNextToken(reader);
         while(token != null) {
 
             //Console.WriteLine("TOKEN " + token);
 
             if (token == "version") {
-                version = int.Parse(GetNextToken());
+                version = int.Parse(GetNextToken(reader));
                 if (version != 2) Console.WriteLine($"VERSION {version}");
             } else if (token == "abstract") isAbstract = true;
             else if (token == "extends") {
 
-                string parent = GetNextToken();
+                string parent = GetNextToken(reader);
                 //Console.WriteLine("PARENT " + parent);
                 if (parent != "nothing") parents.Add(parent + ".ot");
             }
 
             else if (token == "Stats") {
-                token = GetNextToken(); if(token != "{") {
+                token = GetNextToken(reader); if(token != "{") {
                     Console.WriteLine(path + " Stats not followed by open bracket"); break;
                 }
 
-                token = GetNextToken();
+                token = GetNextToken(reader);
                 while(token != "}") {
                     string stat = token;
-                    token = GetNextToken(); if (token != "=") {
+                    token = GetNextToken(reader); if (token != "=") {
                         Console.WriteLine(path + " " + stat + " Stat not followed by equals"); break;
                     }
-                    stats[stat] = GetNextToken();
-                    token = GetNextToken();
+                    stats[stat] = GetNextToken(reader);
+                    token = GetNextToken(reader);
                 }
 
 
@@ -60,7 +68,7 @@ public class ObjectTemplate {
 
 
 
-            token = GetNextToken();
+            token = GetNextToken(reader);
         }
 
         /*
@@ -91,7 +99,7 @@ public class ObjectTemplate {
     }
 
 
-    string GetNextToken() {
+    static string GetNextToken(TextReader reader) {
         StringBuilder s = new StringBuilder();
         
         while (char.IsWhiteSpace((char)reader.Peek())) reader.Read(); //start whitespace
@@ -102,7 +110,7 @@ public class ObjectTemplate {
         if (c == '/' && ((char)reader.Peek()) == '/') {
             reader.ReadLine();
             //Console.WriteLine("COMMENT " + reader.ReadLine());
-            return GetNextToken();
+            return GetNextToken(reader);
         }
 
         //string
