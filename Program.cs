@@ -18,7 +18,13 @@ class Program {
 
          
         Bestiary b = new Bestiary();
+        Scripts.ListDatRowIds(b, 9); return;
+
+        Scripts.ListMonsterLocations(b); return;
+        Scripts.MonsterTypeList(b); return;
+
         //b.CreateMonsterList(); return;
+
         b.CreateMonsterPages(); return;
 
         Scripts.DumpGeometryTriggers(b); return;

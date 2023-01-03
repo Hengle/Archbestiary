@@ -7,6 +7,99 @@ using System.Text;
 
 static class Scripts {
 
+
+    public static void ListDatRowIds(Bestiary b, int row) {
+        foreach(string dat in b.dats.Keys) {
+            if (b.dats[dat].RowCount <= row) continue;
+            if (!dat.EndsWith(".dat64")) continue;
+            foreach(var col in b.dats[dat].Spec.Columns) {
+                if(col.Name == "Id" && col.Type == PoeSharp.Filetypes.Dat.Specification.ColumnType.String && col.Array == false) {
+                    Console.WriteLine(Path.GetFileNameWithoutExtension(dat) + " | " + b.dats[dat][row]["Id"].GetString());
+                }
+            }
+        }
+    }
+
+    public static void ListMonsterLocations(Bestiary b) {
+        using(TextWriter w = new StreamWriter(File.Open("monsterlocations.txt", FileMode.Create))) {
+            var monsterLocations = b.BuildMonsterLocations();
+            var monsterRelations = b.BuildMonsterRelations();
+            foreach (DatRow monsterVariety in b.dats["MonsterVarieties.dat64"]) {
+
+                //DatRow monsterType = monsterVariety["MonsterTypesKey"].GetReference().GetReferencedRow();
+                //if (monsterType["IsSummoned"].GetPrimitive<bool>()) continue;
+
+                string id = monsterVariety.GetID();
+                string name = monsterVariety.GetName();
+                if (name.Length >= 35) name = name.Substring(0, 35);
+                w.Write(id + "@" + name);
+
+
+                if (monsterLocations.ContainsKey(monsterVariety.rowIndex)) {
+                    foreach (var location in monsterLocations[monsterVariety.rowIndex]) {
+                        w.Write("@" + location[0]);
+                        for (int v = 1; v < location.Length; v++)
+                            w.Write(" - " + location[v]);
+                    }
+                }
+
+                if (monsterRelations.ContainsKey(monsterVariety.rowIndex))
+                    foreach (var tuple in monsterRelations[monsterVariety.rowIndex]) {
+                        if (tuple.Type != "Base" && tuple.Type != "Summoned by") continue;
+                        DatRow monster = b.dats["MonsterVarieties.dat64"][tuple.Monster];
+                        w.Write($"@{tuple.Type} - {b.GetMonsterCleanId(monster, false)} ({monster["Name"].GetString()})");
+                    }
+                w.WriteLine();
+            }
+
+        }
+    }
+
+
+    public static void MonsterTypeList(Bestiary b) {
+        Dictionary<int, List<string>> monsterVarieties = new Dictionary<int, List<string>>();
+        Dictionary<int, List<string>> monsterNames = new Dictionary<int, List<string>>();
+
+        Dictionary<int, string> monsterRigs = new Dictionary<int, string>();
+        foreach(DatRow variety in b.dats["MonsterVarieties.dat64"]) {
+            int monsterType = variety["MonsterTypesKey"].GetReference().RowIndex;
+            string[] aos = variety["AOFiles"].GetStringArray();
+            if (aos.Length > 0) {
+                string rig = Bestiary.GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", aos[0]);
+                if (!monsterRigs.ContainsKey(monsterType)) monsterRigs[monsterType] = rig;
+                else if (rig != monsterRigs[monsterType]) Console.WriteLine($"{monsterType} RIG MISMATCH {rig} {monsterRigs[monsterType]}");
+            }
+            string id = variety.GetID().TrimEnd('_');
+            if (!monsterVarieties.ContainsKey(monsterType)) {
+                monsterVarieties[monsterType] = new List<string>();
+                monsterNames[monsterType] = new List<string>();
+            }
+            monsterVarieties[monsterType].Add(id);
+            monsterNames[monsterType].Add(variety.GetName());
+        }
+
+        foreach(DatRow monsterType in b.dats["MonsterTypes.dat64"]) {
+            int i = monsterType.rowIndex;
+            StringBuilder line = new StringBuilder(monsterType.GetID()); line.Append('|');
+            line.Append(monsterRigs.ContainsKey(i) ? monsterRigs[i] : "Unk"); line.Append('|');
+            if (monsterVarieties.ContainsKey(i)) {
+                if (monsterVarieties[i].Count <= 4) for (int variety = 0; variety < monsterVarieties[i].Count; variety++) {
+                    line.Append(monsterNames[i][variety]); line.Append('|');
+                    line.Append(monsterVarieties[i][variety]); line.Append('|');
+                } else {
+                    int skip = (monsterVarieties[i].Count / 4);
+                    for (int variety = 0; variety < 4; variety++) {
+                        line.Append(monsterNames[i][variety * skip]); line.Append('|');
+                        line.Append(monsterVarieties[i][variety * skip]); line.Append('|'); 
+                    }
+                }
+            }
+
+            Console.WriteLine(line.ToString());
+        }
+
+    }
+
     public static void DumpGeometrySkills(Bestiary b) {
 
         StringBuilder s = new StringBuilder("GrantedEffect|idx|");
@@ -688,38 +781,7 @@ void ListMonsterNameLengths() {
     }
 }
 
-void ListMonsterLocations() {
-    var monsterLocations = BuildMonsterLocations();
-    var monsterRelations = BuildMonsterRelations();
-    for (int i = 0; i < dats["MonsterVarieties.dat"].RowCount; i++) {
-        DatRow monsterVariety = dats["MonsterVarieties.dat"][i];
 
-        //DatRow monsterType = monsterVariety["MonsterTypesKey"].GetReference().GetReferencedRow();
-        //if (monsterType["IsSummoned"].GetPrimitive<bool>()) continue;
-
-        string id = monsterVariety["Id"].GetString();
-        string name = monsterVariety["Name"].GetString();
-        if (name.Length >= 35) name = name.Substring(0, 35);
-        Console.Write(id + "@" + name);
-
-        
-        if (monsterLocations.ContainsKey(i)) {
-            foreach (var location in monsterLocations[i]) {
-                Console.Write("@" + location[0]);
-                for (int v = 1; v < location.Length; v++)
-                    Console.Write(" - " + location[v]);
-            }
-        }
-        
-        if (monsterRelations.ContainsKey(i)) 
-            foreach(var tuple in monsterRelations[i]) {
-                if (tuple.Type != "Base" && tuple.Type != "Summoned by") continue;
-                DatRow monster = dats["MonsterVarieties.dat"][tuple.Monster];
-                Console.Write($"@{tuple.Type} - {GetMonsterCleanId(monster, false)} ({monster["Name"].GetString()})");
-            }
-        Console.WriteLine();
-    }
-}
 
 void WriteArmEntityNames(int num) {
     using (TextWriter writer = new StreamWriter(File.Open($"entities{num}.txt", FileMode.Create))) {

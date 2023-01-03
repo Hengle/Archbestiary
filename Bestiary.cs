@@ -294,7 +294,7 @@ $@"<script type=""module"">
     }
 
 
-    Dictionary<int, List<string[]>> BuildMonsterLocations() {
+    public Dictionary<int, List<string[]>> BuildMonsterLocations() {
         Dictionary<int, List<string[]>> monsterLocations = new Dictionary<int, List<string[]>>();
         foreach (DatRow area in dats["WorldAreas.dat64"]) {
             foreach (DatReference monster in area["Bosses_MonsterVarietiesKeys"].GetReferenceArray())
@@ -380,7 +380,7 @@ $@"<script type=""module"">
 
 
 
-    Dictionary<int, HashSet<(int Monster, string Type)>> BuildMonsterRelations() {
+    public Dictionary<int, HashSet<(int Monster, string Type)>> BuildMonsterRelations() {
         var monsterRelations = new Dictionary<int, HashSet<(int Monster, string Type)>>();
         foreach (DatRow row in dats["SpectreOverrides.dat64"]) {
             AddMonsterRelation(monsterRelations, row["Monster"].GetReference().RowIndex, row["Spectre"].GetReference().RowIndex, "Base", "Spectre");
@@ -889,7 +889,7 @@ $@"<script type=""module"">
         return $"{id} {intStatValue}";
     }
 
-    string GetMonsterCleanId(DatRow monsterVariety, bool replaceSlashes = true) {
+    public string GetMonsterCleanId(DatRow monsterVariety, bool replaceSlashes = true) {
         if (replaceSlashes) return monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_').Replace('/', '_');
         return monsterVariety["Id"].GetString().Replace("Metadata/Monsters/", "").TrimEnd('_');
     }
