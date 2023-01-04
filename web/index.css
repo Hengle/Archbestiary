@@ -10,6 +10,14 @@ td {
     white-space: nowrap;
 }
 
+h3 {
+    color: #909090;
+}
+
+table {
+	
+}
+
 iframe {
     height: 100%;
     width: 100%;
@@ -77,6 +85,10 @@ iframe {
 
 .m9 {
     color: #d20000;
+}
+
+.icon {
+	width: 16px;
 }
 
 /*

@@ -18,12 +18,14 @@ class Program {
 
          
         Bestiary b = new Bestiary();
+        b.CreateMonsterListNew(); return;
+
+
         Scripts.ListDatRowIds(b, 9); return;
 
         Scripts.ListMonsterLocations(b); return;
         Scripts.MonsterTypeList(b); return;
 
-        //b.CreateMonsterList(); return;
 
         b.CreateMonsterPages(); return;
 
