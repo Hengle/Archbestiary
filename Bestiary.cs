@@ -18,7 +18,26 @@ public class Bestiary {
     public DatFileIndex dats;
     Dictionary<string, ObjectTemplate> monsterOTs;
     string basePath;
-    static string[] monsterCategories = new string[] { "Uncategorized", "Act 1", "Act 2", "Act 3", "Act 4", "Act 5", "Act 6", "Act 7", "Act 8", "Act 9", "Act 10", "Act 11" };
+
+    enum MonsterCategories {
+        Uncategorized,
+        Act1,
+        Act2,
+        Act3,
+        Act4,
+        Act5,
+        Act6,
+        Act7,
+        Act8,
+        Act9,
+        Act10,
+        Atlas,
+        Anarchy,
+        Sacrifice,
+        Torment
+    }
+
+    static string[] monsterCategoryNames = new string[] { "Uncategorized", "Act 1", "Act 2", "Act 3", "Act 4", "Act 5", "Act 6", "Act 7", "Act 8", "Act 9", "Act 10", "Atlas", "Anarchy", "Sacrifice", "Torment" };
 
 
     //ListPacks();
@@ -40,8 +59,17 @@ public class Bestiary {
 
     public void CreateMonsterList() {
 
+        HashSet<int> bosses = new HashSet<int>();
+        foreach (DatRow row in dats["WorldAreas.dat64"]) {
+            foreach (DatReference boss in row["Bosses_MonsterVarietiesKeys"].GetReferenceArray()) {
+                bosses.Add(boss.RowIndex);
+            }
+        }
+        Console.WriteLine(bosses.Count);
+
+
         HashSet<int> mapMonsters = GetMapMonsters();
-        int[] monsterCategories = GetMonsterCategories();
+        int[] monsterCategories = GetMonsterCategories(bosses);
 
 
         Dictionary<string, string> monsterAdded = History.BuildMonsterVarietyHistory(true);
@@ -62,14 +90,6 @@ public class Bestiary {
                 ignore.Add(bossRef.RowIndex);
             
 
-        HashSet<int> bosses = new HashSet<int>();
-        foreach (DatRow row in dats["WorldAreas.dat64"]) {
-            foreach (DatReference boss in row["Bosses_MonsterVarietiesKeys"].GetReferenceArray()) {
-                bosses.Add(boss.RowIndex);
-            }
-
-        }
-        Console.WriteLine(bosses.Count);
 
         for (int monsterVarietyRow = 1; monsterVarietyRow < dats["MonsterVarieties.dat64"].RowCount; monsterVarietyRow++) {
             if (!ignore.Contains(monsterVarietyRow)) {
@@ -136,8 +156,18 @@ public class Bestiary {
 
     public void CreateMonsterListNew() {
 
+        HashSet<int> bosses = new HashSet<int>();
+        foreach (DatRow row in dats["WorldAreas.dat64"]) {
+            foreach (DatReference boss in row["Bosses_MonsterVarietiesKeys"].GetReferenceArray()) {
+                bosses.Add(boss.RowIndex);
+            }
+
+        }
+        Console.WriteLine(bosses.Count);
+
+
         HashSet<int> mapMonsters = GetMapMonsters();
-        int[] monsterCategories = GetMonsterCategories();
+        int[] monsterCategories = GetMonsterCategories(bosses);
         Dictionary<string, string> monsterAdded = History.BuildMonsterVarietyHistory(true);
         //Dictionary<string, string> monsterAdded = new Dictionary<string, string>();
 
@@ -155,17 +185,9 @@ public class Bestiary {
                 ignore.Add(bossRef.RowIndex);
 
 
-        HashSet<int> bosses = new HashSet<int>();
-        foreach (DatRow row in dats["WorldAreas.dat64"]) {
-            foreach (DatReference boss in row["Bosses_MonsterVarietiesKeys"].GetReferenceArray()) {
-                bosses.Add(boss.RowIndex);
-            }
 
-        }
-        Console.WriteLine(bosses.Count);
-
-        for(int category = 1; category < 12; category++) {
-            html.AppendLine($"<h3>Act {category}</h3>");
+        for(int category = 1; category < monsterCategoryNames.Length; category++) {
+            html.AppendLine($"<h3>{monsterCategoryNames[category]}</h3>");
             html.AppendLine("<table>");
             foreach(DatRow monster in dats["MonsterVarieties.dat64"]) {
                 if (monsterCategories[monster.rowIndex] != category) continue;
@@ -453,7 +475,7 @@ $@"<script type=""module"">
     }
 
 
-    int[] GetMonsterCategories() {
+    int[] GetMonsterCategories(HashSet<int> bosses) {
 
         Dictionary<int, int> areaCategories = new Dictionary<int, int>();
         int[] monsters = new int[dats["MonsterVarieties.dat64"].RowCount];
@@ -505,12 +527,30 @@ $@"<script type=""module"">
                     if (areaCategories.ContainsKey(area.RowIndex))
                         foreach (DatReference bossMonster in pack["BossMonster_MonsterVarietiesKeys"].GetReferenceArray())
                             AddMonsterCategory(monsters, bossMonster.RowIndex, areaCategories[area.RowIndex]);
-        
 
 
+        //Rogue Exiles
+        foreach (DatRow exile in dats["RogueExiles.dat64"]) {
+            if (exile.GetBool("NaturalSpawn")) {
+                AddMonsterCategory(monsters, exile.GetRef("MonsterVarietiesKey").RowIndex, MonsterCategories.Anarchy);
+                bosses.Add(exile.GetRef("MonsterVarietiesKey").RowIndex);
+            }
+        }
+
+        //Tormented Spirits
+        foreach (DatRow spirit in dats["TormentSpirits.dat64"]) 
+            if(spirit.GetInt("SpawnWeight") > 0) {
+                AddMonsterCategory(monsters, spirit.GetRef("MonsterVarietiesKey").RowIndex, MonsterCategories.Torment);
+                bosses.Add(spirit.GetRef("MonsterVarietiesKey").RowIndex);
+            }
 
         return monsters;
     }
+
+    void AddMonsterCategory(int[] monsters, int monster, MonsterCategories category) {
+        AddMonsterCategory(monsters, monster, (int)category);
+    }
+
 
     void AddMonsterCategory(int[] monsters, int monster, int category) {
         if (monsters[monster] == 0 || category < monsters[monster]) //set if uncategorised or in earlier category (should uncategorised be int.max to make this simpler?)

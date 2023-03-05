@@ -8,6 +8,8 @@ namespace Archbestiary.Util {
         public static string GetName(this DatRow r) { return r["Name"].GetString(); }
         public static string GetString(this DatRow r, string col) { return r[col].GetString(); }
         public static int GetInt(this DatRow r, string col) { return r[col].GetPrimitive<int>(); }
+        public static bool GetBool(this DatRow r, string col) { return r[col].GetPrimitive<bool>(); }
+
         public static DatReference GetRef(this DatRow r, string col) { return r[col].GetReference(); }
         public static DatReference[] GetRefArray(this DatRow r, string col) { return r[col].GetReferenceArray(); }
         public static DatRow GetRow(this DatRow r, string col) { return r[col].GetReference().GetReferencedRow(); }
