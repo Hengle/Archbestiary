@@ -34,10 +34,14 @@ public class Bestiary {
         Atlas,
         Anarchy,
         Sacrifice,
-        Torment
+        Torment,
+        Breach,
+        Harbinger
     }
 
-    static string[] monsterCategoryNames = new string[] { "Uncategorized", "Act 1", "Act 2", "Act 3", "Act 4", "Act 5", "Act 6", "Act 7", "Act 8", "Act 9", "Act 10", "Atlas", "Anarchy", "Sacrifice", "Torment" };
+    static string[] monsterCategoryNames = new string[] { 
+        "Uncategorized", "Act 1", "Act 2", "Act 3", "Act 4", "Act 5", "Act 6", "Act 7", "Act 8", "Act 9", "Act 10", 
+        "Atlas", "Anarchy", "Sacrifice", "Torment", "Breach", "Harbinger" };
 
 
     //ListPacks();
@@ -110,7 +114,6 @@ public class Bestiary {
                 int armourMult = monsterType["Armour"].GetPrimitive<int>();
                 int evasionMult = monsterType["Evasion"].GetPrimitive<int>();
                 int esMult = monsterType["EnergyShieldFromLife"].GetPrimitive<int>();
-
                 string name = monsterVariety["Name"].GetString();
                 if (name.Length >= 35) name = name.Substring(0, 35);
                 html.AppendLine($"<tr><td>{(mapMonsters.Contains(monsterVarietyRow) ? "<img src=\"m.png\"/>" : "")}</td>");
@@ -198,11 +201,30 @@ public class Bestiary {
                 string monsterClass = bosses.Contains(monster.rowIndex) ? "linkboss" : "linknormal";
                 string icon = mapMonsters.Contains(monster.rowIndex) ? "<img src=\"m.png\"/>" : "";
 
+                bool fireRes = false;
+                bool coldRes = false;
+                bool lightRes = false;
+                bool chaosRes = false;
+                DatReference? resReference = monster.GetRef("MonsterTypesKey").GetReferencedRow().GetRef("MonsterResistancesKey");
+                if(resReference is not null) {
+                    DatRow res = resReference.GetReferencedRow();
+                    fireRes = res.GetInt("FireMerciless") > 0;
+                    coldRes = res.GetInt("ColdMerciless") > 0;
+                    lightRes = res.GetInt("LightningMerciless") > 0;
+                    chaosRes = res.GetInt("ChaosMerciless") > 0;
+                }
+
+
+
                 html.AppendLine(HTML.Row(
                     HTML.Cell(icon, "icon"),
                     $"<a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{monster.GetName()}</a>",
+                    HTML.Cell(fireRes ? "<img src=\"fire.png\"/>" : "<img src=\"fireg.png\"/>", "icon"),
+                    HTML.Cell(coldRes ? "<img src=\"cold.png\"/>" : "<img src=\"coldg.png\"/>", "icon"),
+                    HTML.Cell(lightRes ? "<img src=\"light.png\"/>" : "<img src=\"lightg.png\"/>", "icon"),
+                    HTML.Cell(chaosRes ? "<img src=\"chaos.png\"/>" : "<img src=\"chaosg.png\"/>", "icon"),
                     $"<a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{added}</a>",
-                    $"<a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a>"));
+                    $"<a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a>")); ;
             }
             html.AppendLine("</table>");
         }
@@ -452,9 +474,6 @@ $@"<script type=""module"">
             foreach (DatReference pack in map["MonsterPacksKeys"].GetReferenceArray())
                 mapPacks.Add(pack.RowIndex);
 
-            
-        
-
 
         foreach(DatRow pack in dats["MonsterPacks.dat64"]) {
             foreach (DatReference worldArea in pack["WorldAreasKeys"].GetReferenceArray()) {
@@ -478,6 +497,15 @@ $@"<script type=""module"">
     int[] GetMonsterCategories(HashSet<int> bosses) {
 
         Dictionary<int, int> areaCategories = new Dictionary<int, int>();
+        Dictionary<int, int> packCategories = new Dictionary<int, int>();
+
+
+        //map packs
+        foreach (DatRow map in dats["Maps.dat64"])
+            foreach (DatReference pack in map["MonsterPacksKeys"].GetReferenceArray())
+                packCategories[pack.RowIndex] = (int)MonsterCategories.Atlas;
+
+
         int[] monsters = new int[dats["MonsterVarieties.dat64"].RowCount];
 
 
@@ -486,10 +514,21 @@ $@"<script type=""module"">
                 int act = areaRef.GetReferencedRow().GetInt("Act");
                 areaCategories[areaRef.RowIndex] = act;
             }
-        
-        //
 
-        foreach(DatRow invasion in dats["InvasionMonstersPerArea.dat64"]) {
+        foreach (DatRow map in dats["Maps.dat64"]) {
+            string character = map.GetString("Regular_GuildCharacter");
+            if (character == "") continue;
+
+
+            areaCategories[map.GetRef("Regular_WorldAreasKey").RowIndex] = (int)MonsterCategories.Atlas;
+            var unique = map.GetRef("Unique_WorldAreasKey");
+            if(unique is not null) areaCategories[unique.RowIndex] = (int)MonsterCategories.Atlas;
+        }
+
+
+            //
+
+            foreach (DatRow invasion in dats["InvasionMonstersPerArea.dat64"]) {
             int area = invasion.GetRef("WorldAreasKey").RowIndex;
             if(areaCategories.ContainsKey(area)) {
                 foreach (DatReference monster in invasion.GetRefArray("MonsterVarietiesKeys1"))
