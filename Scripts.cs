@@ -47,7 +47,7 @@ static class Scripts {
                     foreach (var tuple in monsterRelations[monsterVariety.rowIndex]) {
                         if (tuple.Type != "Base" && tuple.Type != "Summoned by") continue;
                         DatRow monster = b.dats["MonsterVarieties.dat64"][tuple.Monster];
-                        w.Write($"@{tuple.Type} - {b.GetMonsterCleanId(monster, false)} ({monster["Name"].GetString()})");
+                        w.Write($"@{tuple.Type} - {Bestiary.GetMonsterCleanId(monster, false)} ({monster["Name"].GetString()})");
                     }
                 w.WriteLine();
             }

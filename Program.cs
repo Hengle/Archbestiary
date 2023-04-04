@@ -37,7 +37,6 @@ class Program {
 
         
 
-        b.BuildStatSetPerLevels(b.dats); return;
 
         Scripts.ListDatRowCounts(b); return;
         Scripts.ListIdles(); return;
