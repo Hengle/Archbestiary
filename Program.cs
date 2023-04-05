@@ -8,6 +8,11 @@ using System.Net.Security;
 
 class Program {
     public static void Main(string[] args) {
+
+        Scripts.ListArmVersions(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\");
+        //Arm room = new Arm(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Metadata\Terrain\Leagues\Sanctum\Nave\Rooms\encounter_lair_1_1.arm");
+        return;
+
         //History.BuildMonsterVarietyHistory();
 
         //History.DatHistory(); return;

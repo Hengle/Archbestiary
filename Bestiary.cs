@@ -19,7 +19,6 @@ public class Bestiary {
     GrantedEffects grantedEffacts;
 
     enum MonsterCategories {
-        Uncategorized,
         Act1,
         Act2,
         Act3,
@@ -35,12 +34,13 @@ public class Bestiary {
         Sacrifice,
         Torment,
         Breach,
-        Harbinger
+        Harbinger,
+        Uncategorized
     }
 
     static string[] monsterCategoryNames = new string[] { 
-        "Uncategorized", "Act 1", "Act 2", "Act 3", "Act 4", "Act 5", "Act 6", "Act 7", "Act 8", "Act 9", "Act 10", 
-        "Atlas", "Anarchy", "Sacrifice", "Torment", "Breach", "Harbinger" };
+        "Act 1", "Act 2", "Act 3", "Act 4", "Act 5", "Act 6", "Act 7", "Act 8", "Act 9", "Act 10", 
+        "Atlas", "Anarchy", "Sacrifice", "Torment", "Breach", "Harbinger",  "Uncategorized" };
 
     //ListPacks();
     //return;
@@ -188,7 +188,7 @@ public class Bestiary {
 
 
 
-        for(int category = 1; category < monsterCategoryNames.Length; category++) {
+        for(int category = 0; category < monsterCategoryNames.Length; category++) {
             html.AppendLine($"<h3>{monsterCategoryNames[category]}</h3>");
             html.AppendLine("<table>");
             foreach(DatRow monster in dats["MonsterVarieties.dat64"]) {
@@ -215,9 +215,12 @@ public class Bestiary {
 
                 bool[] damageTypes = grantedEffacts.GetDamageTypes(monster);
 
+                string name = monster.GetName();
+                if (name.Length >= 35) name = name.Substring(0, 35);
+
                 html.AppendLine(HTML.Row(
                     HTML.Cell(icon, "icon"),
-                    $"<a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{monster.GetName()}</a>",
+                    $"<a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{name}</a>",
                     HTML.Cell(damageTypes[0] ? "<img src=\"phys.png\"/>" : "<img src=\"physg.png\"/>", "icon"),
                     HTML.Cell(damageTypes[1] ? "<img src=\"fire.png\"/>" : "<img src=\"fireg.png\"/>", "icon"),
                     HTML.Cell(damageTypes[2] ? "<img src=\"cold.png\"/>" : "<img src=\"coldg.png\"/>", "icon"),
@@ -234,11 +237,11 @@ public class Bestiary {
             }
             html.AppendLine("</table>");
         }
-
+        /*
         html.AppendLine($"<h3>Uncategorised</h3>");
 
         html.AppendLine("<table>");
-
+        
         for (int monsterVarietyRow = 1; monsterVarietyRow < dats["MonsterVarieties.dat64"].RowCount; monsterVarietyRow++) {
             if (!ignore.Contains(monsterVarietyRow)) {
                 if (monsterCategories[monsterVarietyRow] != 0) continue;
@@ -272,7 +275,9 @@ public class Bestiary {
                 html.AppendLine($"<td><a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a></td></tr>");
             }
         }
-        html.Append("</table></details><details><summary>Summoned</summary><table>");
+        html.Append("</table>");
+        */
+        html.Append("</details><details><summary>Summoned</summary><table>");
 
 
         for (int monsterVarietyRow = 1; monsterVarietyRow < dats["MonsterVarieties.dat64"].RowCount; monsterVarietyRow++) {
@@ -352,7 +357,7 @@ public class Bestiary {
                 chaosRes = monsterResistance["ChaosMerciless"].GetPrimitive<int>();
             }
             */
-            DatReference? resReference = monsterType["MonsterResistancesKey"].GetReference();
+        DatReference? resReference = monsterType["MonsterResistancesKey"].GetReference();
             int res = resReference is null ? 0 : resReference.RowIndex;
 
             int lifeMult = monsterVariety["LifeMultiplier"].GetPrimitive<int>();
@@ -512,11 +517,12 @@ $@"<script type=""module"">
 
 
         int[] monsters = new int[dats["MonsterVarieties.dat64"].RowCount];
+        for (int i = 0; i < monsters.Length; i++) monsters[i] = (int)MonsterCategories.Uncategorized;
 
 
         foreach (DatRow pin in dats["MapPins.dat64"])
             foreach (DatReference areaRef in pin.GetRefArray("WorldAreasKeys")) {
-                int act = areaRef.GetReferencedRow().GetInt("Act");
+                int act = areaRef.GetReferencedRow().GetInt("Act") - 1;
                 areaCategories[areaRef.RowIndex] = act;
             }
 

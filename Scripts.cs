@@ -8,6 +8,26 @@ using System.Text;
 static class Scripts {
 
 
+    public static void ListArmVersions(string folder) {
+        HashSet<string> versions = new HashSet<string>();
+        int i = 0;
+        using (TextWriter writer = new StreamWriter(File.Create("armversions.txt"))) {
+            int offset = folder.Length + 17;
+            foreach (string path in Directory.EnumerateFiles(folder, "*.arm", SearchOption.AllDirectories)) {
+                using (TextReader reader = new StreamReader(File.OpenRead(path))) {
+                    string version = reader.ReadLine().Substring(8);
+                    if(!versions.Contains(version)) {
+                        Console.WriteLine($"version {version} found");
+                        versions.Add(version);
+                    }
+                    writer.WriteLine(version + "|" + path.Substring(offset));
+                    i++;
+                    if (i % 100 == 0) Console.WriteLine(i);
+                }
+            }
+        }
+    }
+
     public static void ListDatRowIds(Bestiary b, int row) {
         foreach(string dat in b.dats.Keys) {
             if (b.dats[dat].RowCount <= row) continue;
