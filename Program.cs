@@ -9,9 +9,9 @@ using System.Net.Security;
 class Program {
     public static void Main(string[] args) {
 
-        Scripts.ListArmVersions(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\");
+        //Scripts.ListArmVersions(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\");
         //Arm room = new Arm(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Metadata\Terrain\Leagues\Sanctum\Nave\Rooms\encounter_lair_1_1.arm");
-        return;
+        //return;
 
         //History.BuildMonsterVarietyHistory();
 
@@ -20,9 +20,25 @@ class Program {
         //Scripts.OTParent(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", @"Metadata\Monsters\LeagueSanctum\Boss\GargoyleBoss.ot"); return;
 
         //Scripts.AOEffectDrivenEvents(); return;
+        //Mtp mtp = new Mtp(@"F:\Extracted\PathOfExile\3.04.Delve\a\minimap\Metadata_Terrain_Theopolis_OriathSquare_Stonewall.mtp");
+        //Mtp mtp = new Mtp(@"F:\Extracted\PathOfExile\3.04.Delve\a\minimap\Metadata_Terrain_Woods_AreaTransitions.mtp");
+        //mtp.WriteImages(@"F:\Extracted\PathOfExile\3.04.Delve\minimaptiles");
+        //mtp.PrintBoxImage();
 
-         
-        Bestiary b = new Bestiary();
+        /*
+        foreach(string mtppath in Directory.EnumerateFiles(@"F:\Extracted\PathOfExile\3.19.Kalandra\minimap", "*.mtp")) { //@"F:\Extracted\PathOfExile\3.04.Delve\a\minimap"
+            Console.WriteLine(mtppath);
+            Mtp mtp = new Mtp(mtppath);
+            mtp.WriteImages(@"F:\Extracted\PathOfExile\3.19.Kalandra\minimaptiles");
+        }
+        return;
+        */
+
+
+        Bestiary b = new Bestiary(@"F:\Extracted\PathOfExile\3.21.Crucible\ROOT\");
+        //Scripts.UniqueList(b); return;
+        //b.CreateMonsterPages(); return;
+
         b.CreateMonsterListNew(); return;
 
 
@@ -32,7 +48,6 @@ class Program {
         Scripts.MonsterTypeList(b); return;
 
 
-        b.CreateMonsterPages(); return;
 
         Scripts.DumpGeometryTriggers(b); return;
         Scripts.DumpDat(b, "GeometryAttack.dat64"); return;

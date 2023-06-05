@@ -30,6 +30,11 @@ public class ObjectTemplate {
         parents = new List<string>();
         stats = new Dictionary<string, string>();
 
+        if(!File.Exists(Path.Combine(baseFolder, path))) {
+            Console.WriteLine(path + " DOES NOT EXIST");
+            return;
+        }
+
         TextReader reader = new StreamReader(File.OpenRead(Path.Combine(baseFolder, path)));
 
         string token = GetNextToken(reader);

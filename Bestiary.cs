@@ -192,6 +192,7 @@ public class Bestiary {
             html.AppendLine($"<h3>{monsterCategoryNames[category]}</h3>");
             html.AppendLine("<table>");
             foreach(DatRow monster in dats["MonsterVarieties.dat64"]) {
+
                 if (monsterCategories[monster.rowIndex] != category) continue;
                 string id = monster.GetID().TrimEnd('_');
                 string added = monsterAdded.ContainsKey(id) ? monsterAdded[id] : "U";
@@ -213,6 +214,9 @@ public class Bestiary {
                     chaosRes = res.GetInt("ChaosMerciless") > 0;
                 }
 
+                int lifeMult = monster.GetInt("LifeMultiplier");
+
+
                 bool[] damageTypes = grantedEffacts.GetDamageTypes(monster);
 
                 string name = monster.GetName();
@@ -226,14 +230,13 @@ public class Bestiary {
                     HTML.Cell(damageTypes[2] ? "<img src=\"cold.png\"/>" : "<img src=\"coldg.png\"/>", "icon"),
                     HTML.Cell(damageTypes[3] ? "<img src=\"light.png\"/>" : "<img src=\"lightg.png\"/>", "icon"),
                     HTML.Cell(damageTypes[4] ? "<img src=\"chaos.png\"/>" : "<img src=\"chaosg.png\"/>", "icon"),
-
-
-                    //HTML.Cell(fireRes ? "<img src=\"fire.png\"/>" : "<img src=\"fireg.png\"/>", "icon"),
-                    //HTML.Cell(coldRes ? "<img src=\"cold.png\"/>" : "<img src=\"coldg.png\"/>", "icon"),
-                    //HTML.Cell(lightRes ? "<img src=\"light.png\"/>" : "<img src=\"lightg.png\"/>", "icon"),
-                    //HTML.Cell(chaosRes ? "<img src=\"chaos.png\"/>" : "<img src=\"chaosg.png\"/>", "icon"),
+                    HTML.Cell(lifeMult.ToString(), $"m{Math.Min(9, lifeMult / 100)}"),
+                    HTML.Cell(fireRes ? "<img src=\"fire.png\"/>" : "<img src=\"fireg.png\"/>", "icon"),
+                    HTML.Cell(coldRes ? "<img src=\"cold.png\"/>" : "<img src=\"coldg.png\"/>", "icon"),
+                    HTML.Cell(lightRes ? "<img src=\"light.png\"/>" : "<img src=\"lightg.png\"/>", "icon"),
+                    HTML.Cell(chaosRes ? "<img src=\"chaos.png\"/>" : "<img src=\"chaosg.png\"/>", "icon"),
                     $"<a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{added}</a>",
-                    $"<a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a>")); ;
+                    $"<a href=\"Monsters/{id.Replace('/', '_')}.html\" class=\"{monsterClass}\" target=\"body\">{id}</a>"));
             }
             html.AppendLine("</table>");
         }
@@ -389,11 +392,13 @@ public class Bestiary {
             //<tr><td colspan=""4"">{ListReferenceArrayIds(monsterVariety["TagsKeys"].GetReferenceArray())}</td></tr>
 
             string[] aos = monsterVariety["AOFiles"].GetStringArray();
-            string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\", aos[ao]);
+            string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(basePath, aos[ao]);
             for (int ao = 0; ao < aos.Length; ao++) aos[ao] = aos[ao].Replace("Metadata/", "");
             for (int rig = 0; rig < rigs.Length; rig++) rigs[rig] = rigs[rig].Replace("Art/Models/", "");
-            string aiText = File.ReadAllText(Path.Combine(basePath, monsterVariety.GetString("AISFile")));
+            //AIS is gone pepehands
 
+            //string aiText = File.ReadAllText(Path.Combine(basePath, monsterVariety.GetString("AISFile")));
+            string aiText = "NO AI";
 
             HTMLWriter html = new HTMLWriter(File.Open(@"E:\Anna\Anna\Visual Studio\Archbestiary\web\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", FileMode.Create));
             html.WriteLine("<link rel=\"stylesheet\" href=\"monster.css\"></link>");
@@ -603,8 +608,9 @@ $@"<script type=""module"">
 
 
     void AddMonsterCategory(int[] monsters, int monster, int category) {
-        if (monsters[monster] == 0 || category < monsters[monster]) //set if uncategorised or in earlier category (should uncategorised be int.max to make this simpler?)
+        if ( category < monsters[monster]) {
             monsters[monster] = category;
+        }
     }
 
     public Dictionary<int, List<string[]>> BuildMonsterLocations() {
@@ -808,7 +814,7 @@ $@"<script type=""module"">
 
     void ExpandMonsterOT(string otPath, List<string> stats, List<string> values, List<string> sources) {
         if (otPath == "Metadata/Monsters/Monster.ot") return;
-        if (!monsterOTs.ContainsKey(otPath)) monsterOTs[otPath] = new ObjectTemplate(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", otPath);
+        if (!monsterOTs.ContainsKey(otPath)) monsterOTs[otPath] = new ObjectTemplate(basePath, otPath);
         var ot = monsterOTs[otPath];
         foreach (string stat in ot.stats.Keys) {
             stats.Add(stat);
