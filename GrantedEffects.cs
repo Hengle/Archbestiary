@@ -144,7 +144,11 @@ internal class GrantedEffects {
             w.AppendLine("<br/><table class=\"block\">");
             w.AppendLine(HTML.Row(HTML.Cell($"<h4>{grantedEffect.GetID()} ({row})</h4>", "cellGem")));
 
-            PriorityQueue<string, int> stats = new PriorityQueue<string, int>();
+        DatReference animation = grantedEffect.GetRef("Animation");
+        if (animation is not null) w.AppendLine(HTML.Row(HTML.Cell($"{animation.GetReferencedRow().GetID()}")));
+        else w.AppendLine(HTML.Row(HTML.Cell($"NO ANIMATION")));
+
+        PriorityQueue<string, int> stats = new PriorityQueue<string, int>();
 
             bool isAttack = false;
             bool isHit = false;

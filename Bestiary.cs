@@ -7,6 +7,7 @@ using Archbestiary.Util;
 using PoeTerrain;
 using System.Runtime.InteropServices;
 using System.Data;
+using System.Security;
 
 public class Bestiary {
     Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
@@ -315,6 +316,7 @@ public class Bestiary {
 
     public void CreateMonsterPages() {
 
+        Dictionary<string, string> astAnimations = new Dictionary<string, string>();
 
         var monsterLocations = BuildMonsterLocations();
         var monsterRelations = BuildMonsterRelations();
@@ -393,8 +395,28 @@ public class Bestiary {
 
             string[] aos = monsterVariety["AOFiles"].GetStringArray();
             string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(basePath, aos[ao]);
+            string animationText = HTML.RowList(rigs[0]);
+            if (rigs[0] != "COULD NOT FIND RIG") {
+                string astPath = Path.Combine(basePath, rigs[0]).Replace(".amd", ".ast");
+                animationText = HTML.RowList(astPath);
+                if (astAnimations.ContainsKey(astPath)) {
+                    animationText = astAnimations[astPath];
+                } else if (File.Exists(astPath)) {
+                    Ast ast = new Ast(astPath);
+                    StringBuilder s = new StringBuilder();
+                    for (int i = 0; i < ast.animations.Length; i++) s.AppendLine(HTML.RowList(ast.animations[i].name));
+                    animationText = s.ToString();
+                    astAnimations[astPath] = animationText;
+                }
+            }
+
+            
+            
+
             for (int ao = 0; ao < aos.Length; ao++) aos[ao] = aos[ao].Replace("Metadata/", "");
             for (int rig = 0; rig < rigs.Length; rig++) rigs[rig] = rigs[rig].Replace("Art/Models/", "");
+
+
             //AIS is gone pepehands
 
             //string aiText = File.ReadAllText(Path.Combine(basePath, monsterVariety.GetString("AISFile")));
@@ -449,8 +471,9 @@ public class Bestiary {
                         HTML.Break(),
                         HTML.TableClass("block", HTML.Array(monsterLocations.ContainsKey(monsterVarietyRow) ? monsterLocations[monsterVarietyRow].ToHTMLTableFixedColumns(4) : null)),
                         HTML.Break(),
-                        HTML.TableClass("block", HTML.Row(monsterVariety.GetString("AISFile")),  HTML.Row(aiText))
-
+                        HTML.TableClass("block", HTML.Row(monsterVariety.GetString("AISFile")),  HTML.Row(aiText)),
+                        HTML.Break(),
+                        HTML.TableClass("block", animationText)
                     )
                 )
             );

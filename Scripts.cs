@@ -1,12 +1,74 @@
 ﻿using Archbestiary.Util;
 using ImageMagick;
 using PoeSharp.Filetypes.Dat;
+using PoeTerrain;
 using System;
 using System.Diagnostics;
 using System.Text;
 
 static class Scripts {
 
+    public static void ListAstAnimations(string folder) {
+        using(TextWriter writer = new  StreamWriter(File.Create("ast_animations.txt"))) {
+            foreach (string path in Directory.EnumerateFiles(folder, "*.ast", SearchOption.AllDirectories)) {
+
+                //if (!path.Contains("GenericBiped")) continue;
+
+                Ast ast = new Ast(path);
+
+                //bool flicker = false;
+                //for (int i = 0; i < ast.animations.Length; i++) if (ast.animations[i].name == "multi_beam_aoe_01") { flicker = true; break; }
+                //bool lightning = false;
+                //for (int i = 0; i < ast.animations.Length; i++) if (ast.animations[i].name == "spinning_slam_01") { lightning = true; break; }
+
+                //if (!flicker || !lightning) continue;
+
+                //if (ast.lights.Length == 0) continue;
+
+                writer.WriteLine(path.Substring(folder.Length));
+
+                //for (int i = 0; i < ast.lights.Length; i++) Console.WriteLine("    LIGHT - " + ast.lights[i].name);
+
+                for (int i = 0; i < ast.animations.Length; i++) writer.WriteLine("    " + ast.animations[i].name);
+                writer.WriteLine();
+            }
+
+        }
+    }
+
+    public static void ListAstVersions(string folder) {
+        Random r = new Random(1);
+        Dictionary<int, List<string>> astVersions = new Dictionary<int, List<string>>();
+        int filesProcessed = 0;
+        foreach (string path in Directory.EnumerateFiles(folder, "*.ast", SearchOption.AllDirectories)) {
+            using(BinaryReader reader = new BinaryReader(File.OpenRead(path))) {
+                byte version = reader.ReadByte();
+                if(!astVersions.ContainsKey(version)) astVersions[version] = new List<string>();
+                astVersions[version].Add(path.Substring(folder.Length));
+                filesProcessed++;
+                if (filesProcessed % 100 == 0) Console.WriteLine(filesProcessed);
+            }
+        }
+        Console.WriteLine();
+        foreach (int version in astVersions.Keys) {
+            foreach(string monster in astVersions[version]) {
+                Console.WriteLine($"{version} {monster}");
+            }
+
+            /*
+            Console.Write(version);
+            //fisher-yates randomize
+            for (int count = astVersions[version].Count - 1; count > 0; count--) {
+                int swapVal = r.Next(count);
+                string temp = astVersions[version][count];
+                astVersions[version][count] = astVersions[version][swapVal];
+                astVersions[version][swapVal] = temp;
+            }
+            for (int i = 0; i < Math.Min(astVersions[version].Count, 10); i++) Console.Write(" " + astVersions[version][i]);
+            Console.WriteLine();
+            */
+        }
+    }
 
     public static void ListArmVersions(string folder) {
         HashSet<string> versions = new HashSet<string>();
@@ -339,22 +401,6 @@ static class Scripts {
     }
 
 
-    public static void ListUnusedRigs() {
-        HashSet<string> rigs = new HashSet<string>(Directory.EnumerateFiles(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Art\Models", "*.amd", SearchOption.AllDirectories));
-        Console.WriteLine("RIG LIST CREATED");
-        foreach(string ao in Directory.EnumerateFiles(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Metadata\", "*.ao", SearchOption.AllDirectories)) {
-            string rig = Bestiary.GetRigFromAO("", ao);
-            if (!rig.StartsWith("COULD NOT")) {
-                string combined = Path.Combine(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\", rig).Replace('/', '\\');
-                if(rigs.Contains(combined)) {
-                    //Console.WriteLine(combined);
-                    rigs.Remove(combined);
-                }
-            }
-        }
-        Console.WriteLine("\r\n\r\n\r\n\r\n\r\nUNUSED");
-        foreach (string rig in rigs) Console.WriteLine(rig);
-    }
 
     public static void ListIdles() {
         string folder = @"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Art\Models\";
@@ -393,6 +439,46 @@ static class Scripts {
             }
         }
     }
+
+    public static void ListMonsterRigsNew(Bestiary b) {
+        var history = History.BuildMonsterVarietyHistory();
+
+        for (int i = 0; i < b.dats["MonsterVarieties.dat64"].RowCount; i++) {
+            DatRow monster = b.dats["MonsterVarieties.dat64"][i];
+            DatReference monsterType = monster["MonsterTypesKey"].GetReference();
+            string monsterTypeId = monsterType.GetReferencedRow()["Id"].GetString();
+            bool summoned = monsterType.GetReferencedRow()["IsSummoned"].GetPrimitive<bool>();
+            string monsterId = monster["Id"].GetString().TrimEnd('_');
+            string monsterName = monster["Name"].GetString();
+            string version = history.ContainsKey(monsterId) ? history[monsterId] : "unk";
+
+
+            foreach (string ao in monster["AOFiles"].GetStringArray()) {
+                string rig = Bestiary.GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", ao);
+                Console.WriteLine($"{version}@{monsterType.RowIndex}@{summoned}@{monsterTypeId}@{i}@{monsterId}@{monsterName}@{ao}@{rig}");
+                break;
+            }
+        }
+    }
+
+    public static void ListUnusedRigs() {
+        HashSet<string> rigs = new HashSet<string>(Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.21.Crucible\Art\Models", "*.amd", SearchOption.AllDirectories));
+        Console.WriteLine("RIG LIST CREATED");
+        foreach (string ao in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.21.Crucible\Metadata\", "*.ao", SearchOption.AllDirectories)) {
+            string rig = Bestiary.GetRigFromAO("", ao);
+            if (!rig.StartsWith("COULD NOT")) {
+                string combined = Path.Combine(@"E:\Extracted\PathOfExile\3.21.Crucible\", rig).Replace('/', '\\');
+                if (rigs.Contains(combined)) {
+                    //Console.WriteLine(combined);
+                    rigs.Remove(combined);
+                }
+            }
+        }
+        Console.WriteLine("\r\n\r\n\r\n\r\n\r\nUNUSED");
+        foreach (string rig in rigs) Console.WriteLine(rig);
+    }
+
+
 
 
     public static void UniqueList(Bestiary b, int start = 1346) {

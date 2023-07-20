@@ -9,6 +9,9 @@ using System.Net.Security;
 class Program {
     public static void Main(string[] args) {
 
+        Scripts.ListAstAnimations(@"E:\Extracted\PathOfExile\3.21.Crucible\Art\Models\MONSTERS\"); return;
+        //Scripts.ListUnusedRigs(); return;
+
         //Scripts.ListArmVersions(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\");
         //Arm room = new Arm(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Metadata\Terrain\Leagues\Sanctum\Nave\Rooms\encounter_lair_1_1.arm");
         //return;
@@ -35,9 +38,9 @@ class Program {
         */
 
 
-        Bestiary b = new Bestiary(@"F:\Extracted\PathOfExile\3.21.Crucible\ROOT\");
+        Bestiary b = new Bestiary(@"E:\Extracted\PathOfExile\3.21.Crucible\");
         //Scripts.UniqueList(b); return;
-        //b.CreateMonsterPages(); return;
+        b.CreateMonsterPages(); return;
 
         b.CreateMonsterListNew(); return;
 
