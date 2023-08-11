@@ -4,10 +4,8 @@ using PoeSharp.Filetypes.Dat;
 using PoeSharp.Filetypes.Dat.Specification;
 using System.Text;
 using Archbestiary.Util;
-using PoeTerrain;
-using System.Runtime.InteropServices;
+using PoeFormats;
 using System.Data;
-using System.Security;
 
 public class Bestiary {
     Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
@@ -395,7 +393,19 @@ public class Bestiary {
 
             string[] aos = monsterVariety["AOFiles"].GetStringArray();
             string[] rigs = new string[aos.Length]; for (int ao = 0; ao < aos.Length; ao++) rigs[ao] = GetRigFromAO(basePath, aos[ao]);
+
+            string[] acts = monsterVariety["ACTFiles"].GetStringArray();
+            //Act act = new Act(Path.Combine(basePath, acts[0]));
+
+            //StringBuilder animationTextBuilder = new StringBuilder(acts[0]);
+            //foreach(var action in act.animations.Keys) {
+            //    animationTextBuilder.AppendLine(HTML.RowList($"{action} - {act.animations[action]}"));
+            //}
+            string animationText = HTML.RowList(File.ReadAllText(Path.Combine(basePath, acts[0])));
+
+            /*
             string animationText = HTML.RowList(rigs[0]);
+            
             if (rigs[0] != "COULD NOT FIND RIG") {
                 string astPath = Path.Combine(basePath, rigs[0]).Replace(".amd", ".ast");
                 animationText = HTML.RowList(astPath);
@@ -409,9 +419,9 @@ public class Bestiary {
                     astAnimations[astPath] = animationText;
                 }
             }
+            */
 
-            
-            
+
 
             for (int ao = 0; ao < aos.Length; ao++) aos[ao] = aos[ao].Replace("Metadata/", "");
             for (int rig = 0; rig < rigs.Length; rig++) rigs[rig] = rigs[rig].Replace("Art/Models/", "");
