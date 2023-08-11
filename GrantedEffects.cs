@@ -26,6 +26,17 @@ internal class GrantedEffects {
         "base_chaos_damage_to_deal_per_minute",
     };
 
+    static Dictionary<string, string> activeSkillDefaultAnimations = new Dictionary<string, string>() {
+        {"monster_projectile_weapon", "Throw"},
+        {"fireball", "SpellProjectileFire"},
+        {"monster_projectile_spell", "SpellProjectile"},
+        {"monster_mortar", "SpellProjectile"},
+        {"empty_action_spell", "SpellAreaOfEffect"},
+        {"melee", "Melee"},
+        {"leap_slam", "LeapSlam"},
+        {"dash_to_target", "LeapSlam"},
+    };
+
     public GrantedEffects(DatFileIndex dats) {
         this.dats = dats;
         grantedEffectPerLevels = BuildEffectPerLevels(dats);
@@ -144,10 +155,19 @@ internal class GrantedEffects {
             w.AppendLine("<br/><table class=\"block\">");
             w.AppendLine(HTML.Row(HTML.Cell($"<h4>{grantedEffect.GetID()} ({row})</h4>", "cellGem")));
 
-        DatReference animation = grantedEffect.GetRef("Animation");
-        if (animation is not null) w.AppendLine(HTML.Row(HTML.Cell($"{animation.GetReferencedRow().GetID()}")));
-        else w.AppendLine(HTML.Row(HTML.Cell($"NO ANIMATION")));
+        DatReference rSkill = grantedEffect["ActiveSkill"].GetReference();
+        DatRow activeSkill = rSkill.GetReferencedRow();
 
+
+        DatReference animation = grantedEffect.GetRef("Animation");
+        if (animation is not null) {
+            w.AppendLine(HTML.Row(HTML.Cell($"{animation.GetReferencedRow().GetID()}")));
+        } else if (activeSkillDefaultAnimations.ContainsKey(activeSkill.GetID())) {
+            w.AppendLine(HTML.Row(HTML.Cell(activeSkillDefaultAnimations[activeSkill.GetID()])));
+        } else {
+            w.AppendLine(HTML.Row(HTML.Cell($"NO ANIMATION")));
+
+        }
         PriorityQueue<string, int> stats = new PriorityQueue<string, int>();
 
             bool isAttack = false;
@@ -155,8 +175,6 @@ internal class GrantedEffects {
             //ActiveSkill
             {
                 if (debug) w.AppendLine(HTML.Row(HTML.Cell("ActiveSkill", "cellFire")));
-                DatReference rSkill = grantedEffect["ActiveSkill"].GetReference();
-                DatRow activeSkill = rSkill.GetReferencedRow();
                 int skillId = rSkill.RowIndex;
                 string skillName = activeSkill.GetID();
                 //string damageType = GetSkillDamageTypes(activeSkill);
