@@ -1,15 +1,75 @@
 ﻿using PoeSharp.Filetypes.BuildingBlocks;
 using PoeSharp.Filetypes.Dat;
 using PoeSharp.Filetypes.Dat.Specification;
-using System.Text;
-using Archbestiary.Util;
-using PoeTerrain;
-using System.Net.Security;
+using PoeFormats;
+using System.IO;
 
 class Program {
     public static void Main(string[] args) {
 
-        Scripts.ListAstAnimations(@"E:\Extracted\PathOfExile\3.21.Crucible\Art\Models\MONSTERS\"); return;
+        //Scripts.CreateMonsterIdleAnimations(); return;
+
+        Bestiary b = new Bestiary(@"E:\Extracted\PathOfExile\3.21.Crucible");
+        //Scripts.FindGrantedEffectsWithoutAnimation(b, "fireball"); return;
+        //Scripts.ActiveSkillCounts(b); return;
+        b.CreateMonsterPages(); return;
+        Scripts.PrintMonsterRenderingInfo(b);
+        return;
+
+        Smd smd = new Smd(@"E:\Extracted\PathOfExile\3.21.Crucible\Art\Models\MONSTERS\Anchorman\Anchorman_armour_c18cc675.smd");
+        for(int i = 0; i < 20; i++) Console.WriteLine(smd.model.meshes[0].verts[i]);
+        return;
+
+        //Act act2 = new Act(@"E:\Extracted\PathOfExile\3.21.Crucible\Metadata\Monsters\AnimatedItem\AnimatedItemDelve.act");
+        //foreach(string action in act2.animations.Keys) Console.WriteLine(action + " - " + act2.animations[action]);
+        //return;
+
+
+        foreach (string path in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.21.Crucible\Metadata\Monsters", "*.act", SearchOption.AllDirectories)) {
+            Act act = new Act(path);
+            if (act.animations.ContainsKey("Idle")) Console.WriteLine(path + "    -    " + act.animations["Idle"]);
+            else Console.WriteLine(path + "        HAS NO IDLE????????????????????????????????????????????????????");
+        }
+        return;
+
+
+        foreach(string path in Directory.EnumerateFiles(@"E:\Extracted\PathOfExile\3.21.Crucible\Metadata\Monsters", "*.aoc", SearchOption.AllDirectories)) {
+            Console.Write(Path.GetFileName(path));
+            Aoc aoc = new Aoc(path);
+            Console.WriteLine($"      {aoc.skeleton}      {aoc.skin}");
+        }
+        return;
+
+        //Scripts.ListAstVersions(@"E:\Extracted\PathOfExile\3.21.Crucible\Art\Models\MONSTERS\");
+        //return;
+        Ast ast = new Ast(@"E:\Extracted\PathOfExile\3.21.Crucible\Art\Models\MONSTERS\Architects\rig.ast");
+        //Ast ast = new Ast(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\Art\Models\MONSTERS\Anchorite\AnchoriteMother\rig.ast");
+        foreach(var track in ast.animations[4].tracks) {
+            Console.WriteLine($"{track.positionKeys[0][1]} {track.positionKeys[0][2]} {track.positionKeys[0][3]}");
+        }
+
+        return;
+        //Tgt tgt = new Tgt(@"F:\Extracted\PathOfExile\3.21.Crucible\ROOT\Art\Models\Terrain\EndGame\Burn\Tiles\BurnLedge\CcMM_01.tgt");
+        Tgt tgt = new Tgt(@"F:\Extracted\PathOfExile\a\art\models\terrain\hideout\exilecon23hideout\level03.tgt");
+        Console.WriteLine(tgt.sizeX);
+        Console.WriteLine(tgt.sizeY);
+        Console.WriteLine(tgt.tileMeshRoot);
+        Console.WriteLine(tgt.groundMask);
+        for(int i = 0; i < tgt.materials.Length; i++) Console.WriteLine($"{i} {tgt.materials[i]}");
+        tgt.PrintSubtileMaterials(2, 2);
+
+        tgt.ToObj();
+        return;
+
+        foreach(string path in Directory.EnumerateFiles(@"F:\Extracted\PathOfExile\a\art\models\terrain\hideout\exilecon23hideout\tgms", "*.tgm")) {
+            Console.WriteLine(path);
+            Tgm tgm = new Tgm(path);
+            tgm.ToObj();
+        }
+        return;
+
+
+        //Scripts.ListAstAnimations(@"E:\Extracted\PathOfExile\3.21.Crucible\Art\Models\MONSTERS\"); return;
         //Scripts.ListUnusedRigs(); return;
 
         //Scripts.ListArmVersions(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\");
@@ -38,7 +98,7 @@ class Program {
         */
 
 
-        Bestiary b = new Bestiary(@"E:\Extracted\PathOfExile\3.21.Crucible\");
+        //Bestiary b = new Bestiary(@"E:\Extracted\PathOfExile\3.21.Crucible\");
         //Scripts.UniqueList(b); return;
         b.CreateMonsterPages(); return;
 

@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PoeSharp\src\PoeSharp.Filetypes\PoeSharp.Filetypes.csproj" />
-    <ProjectReference Include="..\PoeTerrain\PoeTerrain.csproj" />
+    <ProjectReference Include="..\PoeTerrain\PoeFormats.csproj" />
   </ItemGroup>
 
 </Project>

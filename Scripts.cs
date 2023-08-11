@@ -1,12 +1,137 @@
 ﻿using Archbestiary.Util;
 using ImageMagick;
 using PoeSharp.Filetypes.Dat;
-using PoeTerrain;
+using PoeFormats;
 using System;
-using System.Diagnostics;
 using System.Text;
+using System.IO;
+using ImageMagick;
+using ImageMagick.Formats;
 
 static class Scripts {
+
+    public static void FindGrantedEffectsWithoutAnimation(Bestiary b, string activeSkill) {
+        foreach (DatRow monster in b.dats["MonsterVarieties.dat64"]) {
+            foreach (DatReference geRef in monster.GetRefArray("GrantedEffectsKeys")) {
+                DatRow grantedEffect = geRef.GetReferencedRow();
+                string skillName = grantedEffect.GetRef("ActiveSkill").GetReferencedRow().GetID();
+                if (skillName != activeSkill) continue;
+                DatReference animationRef = grantedEffect.GetRef("Animation");
+                if(animationRef is null) {
+                    Console.WriteLine($"{monster.GetID()} {grantedEffect.GetID()} {activeSkill}");
+                }
+            }
+        }
+    }
+
+    public static void ActiveSkillCounts(Bestiary b) {
+        Dictionary<string, int> skills = new Dictionary<string, int>();
+        Dictionary<string, int> skillAnimationCounts = new Dictionary<string, int>();
+        Dictionary<string, HashSet<string>> skillAnimations = new Dictionary<string, HashSet<string>>();
+ 
+        foreach (DatRow monster in b.dats["MonsterVarieties.dat64"]) {
+            foreach(DatReference geRef in monster.GetRefArray("GrantedEffectsKeys")) {
+                DatRow grantedEffect = geRef.GetReferencedRow();
+                string skillName = grantedEffect.GetRef("ActiveSkill").GetReferencedRow().GetID();
+                if(!skills.ContainsKey(skillName)) skills[skillName] = 0;
+                skills[skillName] = skills[skillName] + 1;
+
+                DatReference animationRef = grantedEffect.GetRef("Animation");
+                if(animationRef is not null) {
+                    string animation = animationRef.GetReferencedRow().GetID();
+                    if (!skillAnimationCounts.ContainsKey(skillName)) {
+                        skillAnimationCounts[skillName] = 0;
+                        skillAnimations[skillName] = new HashSet<string>();
+                    }
+                    skillAnimationCounts[skillName] = skillAnimationCounts[skillName] + 1;
+                    skillAnimations[skillName].Add(animation);
+                }
+            }
+        }
+
+        foreach(string skill in skills.Keys) {
+            if(skillAnimationCounts.ContainsKey(skill)) {
+                Console.Write($"{skills[skill]}|{skill}|{skillAnimationCounts[skill]/(float)skills[skill]}");
+                foreach (string animation in skillAnimations[skill]) Console.Write("|" + animation);
+                Console.WriteLine();
+            } else {
+                Console.WriteLine($"{skills[skill]}|{skill}");
+            }
+        }
+    }
+
+    public static void CreateMonsterIdleAnimations(string folder = @"F:\Anna\Desktop\test") {
+        Dictionary<string, HashSet<int>> images = new Dictionary<string, HashSet<int>>();
+        foreach(string path in Directory.EnumerateFiles(folder, "*.png")) {
+            string filename = Path.GetFileNameWithoutExtension(path);
+            string monster = filename.Substring(0, filename.LastIndexOf('_'));
+            int frame = int.Parse(filename.Substring(filename.LastIndexOf('_') + 1));
+            if(!images.ContainsKey(monster)) images[monster] = new HashSet<int>();
+            images[monster].Add(frame);
+        }
+
+        foreach(string monster in images.Keys) {
+            MagickImageCollection animation = new MagickImageCollection();
+            for(int i = 1; i <= images[monster].Count; i++) {
+                MagickImage image = new MagickImage($"{folder}\\{monster}_{i}.png");
+                image.AnimationDelay = 3;
+                animation.Add(image);
+            }
+            
+            WebPWriteDefines defines = new WebPWriteDefines() { Lossless = true };
+            Console.WriteLine(monster);
+            animation.Write($"{folder}\\{monster}.webp", defines);
+        }
+    }
+
+    public static void PrintMonsterRenderingInfo(Bestiary b) {
+        using(TextWriter w = new StreamWriter(File.Open("monsterart.txt", FileMode.Create))) {
+            for (int i = 1; i < b.dats["MonsterVarieties.dat64"].RowCount; i++) {
+                DatRow monster = b.dats["MonsterVarieties.dat64"][i];
+                string id = monster.GetID();
+                string act = monster["ACTFiles"].GetStringArray()[0];
+                string aoc = monster["AOFiles"].GetStringArray()[0] + 'c';
+                string name = monster.GetName();
+                w.WriteLine($"{i}@{id}@{name}@{act}@{aoc}");
+            }
+        }
+    }
+
+    public static void PrintBoxImage(this Mtp mtp) {
+        MagickImage image = new MagickImage(MagickColors.White, 4096, 4096);
+        foreach (MinimapImage i in mtp.images) {
+            string writeVal = $"{i.filename}\n{i.orientation}\n{i.unk2} {i.unk3} {i.unk4}\n{i.height}\n{i.width}\n{i.leftPadding}";
+            image.Draw(new Drawables()
+                .FillColor(MagickColors.Transparent)
+                .StrokeColor(MagickColors.GreenYellow)
+                .StrokeWidth(2)
+                .Rectangle(i.originX - i.leftPadding, i.originY - i.topPadding, i.originX - i.leftPadding + i.height, i.originY - i.topPadding + i.height));
+        }
+        image.Write(Path.GetFileNameWithoutExtension(mtp.path) + ".png");
+    }
+
+    public static void PrintValueImage(this Mtp mtp) {
+        MagickImage image = new MagickImage(MagickColors.White, 4096, 4096);
+        foreach (MinimapImage i in mtp.images) {
+            string writeVal = $"{i.filename}\n{i.orientation}\n{i.unk2} {i.unk3} {i.unk4}\n{i.height}\n{i.width}\n{i.leftPadding}";
+            image.Draw(new Drawables().FillColor(MagickColors.YellowGreen).FontPointSize(16).Gravity(Gravity.Southwest).TextAlignment(TextAlignment.Center).Text(i.originX * 2, i.originY * 2, writeVal));
+        }
+        image.Write(Path.GetFileNameWithoutExtension(mtp.path) + ".png");
+    }
+
+    public static void WriteImages(this Mtp mtp, string outputFolder) {
+        MagickImage image = File.Exists(mtp.path.Replace(".mtp", ".png")) ? new MagickImage(mtp.path.Replace(".mtp", ".png")) : new MagickImage(mtp.path.Replace(".mtp", ".dds"));
+        foreach (MinimapImage i in mtp.images) {
+            MagickImage i2 = new MagickImage(image);
+            i2.Crop(new MagickGeometry((int)(i.originX - i.leftPadding), (int)(i.originY - i.topPadding), i.width * 40, i.height));
+            i2.RePage();
+            string filename = $"{i.filename.Substring(0, i.filename.Length - 4)}_{i.orientation}.png";
+            string filePath = Path.Combine(outputFolder, filename);
+            if (!Directory.Exists(Path.GetDirectoryName(filePath))) Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+            i2.Write(filePath);
+        }
+    }
+
 
     public static void ListAstAnimations(string folder) {
         using(TextWriter writer = new  StreamWriter(File.Create("ast_animations.txt"))) {
