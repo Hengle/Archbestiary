@@ -10,7 +10,7 @@ class Program {
         //Scripts.CreateMonsterIdleAnimations(); return;
 
         Bestiary b = new Bestiary(@"E:\Extracted\PathOfExile\3.21.Crucible");
-        //Scripts.FindGrantedEffectsWithoutAnimation(b, "fireball"); return;
+        //Scripts.FindGrantedEffectsWithoutAnimation(b, "glacial_cascade"); return;
         //Scripts.ActiveSkillCounts(b); return;
         b.CreateMonsterPages(); return;
         Scripts.PrintMonsterRenderingInfo(b);

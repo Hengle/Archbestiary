@@ -27,14 +27,22 @@ internal class GrantedEffects {
     };
 
     static Dictionary<string, string> activeSkillDefaultAnimations = new Dictionary<string, string>() {
-        {"monster_projectile_weapon", "Throw"},
-        {"fireball", "SpellProjectileFire"},
-        {"monster_projectile_spell", "SpellProjectile"},
-        {"monster_mortar", "SpellProjectile"},
-        {"empty_action_spell", "SpellAreaOfEffect"},
-        {"melee", "Melee"},
-        {"leap_slam", "LeapSlam"},
         {"dash_to_target", "LeapSlam"},
+        {"empty_action_spell", "SpellAreaOfEffect"},
+        {"fire_storm", "SpellAreaOfEffectFire"},
+        {"fireball", "SpellProjectileFire"},
+        {"garukhan_combo_attack", "DualStrike"},
+        {"glacial_cascade", "SpellProjectileCold"},
+        {"ground_slam", "GroundSlam"},
+        {"leap_slam", "LeapSlam"},
+        {"melee", "Melee"},
+        {"monster_mortar", "SpellProjectile"},
+        {"monster_projectile_spell", "SpellProjectile"},
+        {"monster_projectile_weapon", "Throw"},
+        {"shadow_projectiles", "ShadowProjectiles"},
+        {"spark", "SpellProjectileLightning"},
+        {"spell_nova", "SpellAreaOfEffect"},
+        {"viper_strike", "Melee"},
     };
 
     public GrantedEffects(DatFileIndex dats) {
@@ -369,6 +377,7 @@ internal class GrantedEffects {
                     w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_s")));
                     //TODO FORMAT LEVELED SPELL CRIT
                     onUpdate.Add(@$"		SetIntStat(""{row}_s"", slider.value, ""Spell Crit Chance: "", {HTML.JSArray(spellCritLevels.ToArray())}, {HTML.JSArray(spellCritValues.ToArray())});");
+                    usedFunctions.Add("SetIntStat");
                 } else {
                     w.AppendLine(HTML.Row(HTML.Cell(string.Format("<span class=\"statTag\">Critical Strike Chance:</span> {0:F2}%", ((float)spellCritValues[0]) / 100))));
                 }
@@ -380,6 +389,7 @@ internal class GrantedEffects {
                     w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_m")));
                     //TODO FORMAT LEVELED ATTACK MULT
                     onUpdate.Add(@$"		SetIntStat(""{row}_m"", slider.value, ""<span class=\""statTag\"">Attack Damage:</span> "", {HTML.JSArray(baseMultiplierLevels.ToArray())}, {HTML.JSArray(baseMultiplierValues.ToArray())});");
+                    usedFunctions.Add("SetIntStat");
                 } else {
                     w.AppendLine(HTML.Row(HTML.Cell($"<span class=\"statTag\">Attack Damage:</span> {((float)(baseMultiplierValues[0] / 10)) / 10 + 100}% of Base")));
                 }
