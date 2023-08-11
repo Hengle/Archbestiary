@@ -36,12 +36,12 @@ internal class GrantedEffects {
         Dictionary<int, List<DatRow>> effectPerLevels = new Dictionary<int, List<DatRow>>();
 
         foreach (DatRow row in dats["GrantedEffectsPerLevel.dat64"]) {
-            int level = row["PlayerLevelReq"].GetPrimitive<int>();
+            int level = (int)row.GetFloat("PlayerLevelReq");
             int grantedEffect = row["GrantedEffect"].GetReference().RowIndex;
             if (!effectPerLevels.ContainsKey(grantedEffect)) effectPerLevels[grantedEffect] = new List<DatRow>();
             int insert = 0;
             for (int i = 0; i < effectPerLevels[grantedEffect].Count; i++) {
-                int checkLevel = effectPerLevels[grantedEffect][i]["PlayerLevelReq"].GetPrimitive<int>();
+                int checkLevel = (int)effectPerLevels[grantedEffect][i].GetFloat("PlayerLevelReq");
                 if (level == checkLevel) { //higher level gem with same level requirement, only happens on player skills
                     insert = -1;
                     effectPerLevels[grantedEffect][i] = row;
@@ -61,12 +61,12 @@ internal class GrantedEffects {
         Dictionary<int, List<DatRow>> statSetPerLevels = new Dictionary<int, List<DatRow>>();
 
         foreach (DatRow row in dats["GrantedEffectStatSetsPerLevel.dat64"]) {
-            int level = row["PlayerLevelReq"].GetPrimitive<int>();
+            int level = (int)row["PlayerLevelReq"].GetPrimitive<float>();
             int statSet = row["StatSet"].GetReference().RowIndex;
             if (!statSetPerLevels.ContainsKey(statSet)) statSetPerLevels[statSet] = new List<DatRow>();
             int insert = 0;
             for (int i = 0; i < statSetPerLevels[statSet].Count; i++) {
-                int checkLevel = statSetPerLevels[statSet][i]["PlayerLevelReq"].GetPrimitive<int>();
+                int checkLevel = (int)statSetPerLevels[statSet][i].GetFloat("PlayerLevelReq");
                 if (level == checkLevel) { //higher level gem with same level requirement, only happens on player skills
                     insert = -1;
                     statSetPerLevels[statSet][i] = row;
@@ -82,7 +82,7 @@ internal class GrantedEffects {
 
 
     public string CreateGrantedEffectTables(DatRow monsterVariety, List<string> onUpdate, HashSet<string> usedFunctions, int damageMult, int damageSpread) {
-        DatReference[] refs = monsterVariety["GrantedEffectsKeys"].GetReferenceArray();
+        DatReference[] refs = monsterVariety.GetRefArray("GrantedEffectsKeys");
         if (refs is null) return "";
         StringBuilder effectTables = new StringBuilder();
         for (int i = 0; i < refs.Length; i++) {
@@ -206,14 +206,14 @@ internal class GrantedEffects {
 
 
             int cooldownGroup = effectPerLevels[0].GetInt("CooldownGroup");  //technically changes for like 1 thing but I think its a bug
-            List<int> levelReqs = new List<int>(); levelReqs.Add(effectPerLevels[0].GetInt("PlayerLevelReq"));
+            List<int> levelReqs = new List<int>(); levelReqs.Add((int)effectPerLevels[0].GetFloat("PlayerLevelReq"));
             List<int> storedUses = new List<int>(); storedUses.Add(effectPerLevels[0].GetInt("StoredUses"));
             List<int> cooldowns = new List<int>(); cooldowns.Add(effectPerLevels[0].GetInt("Cooldown"));
 
 
 
             for (int i = 1; i < effectPerLevels.Count; i++) {
-                int newLevelReq = effectPerLevels[i].GetInt("PlayerLevelReq");
+                int newLevelReq = (int)effectPerLevels[i].GetFloat("PlayerLevelReq");
                 int newStoredUses = effectPerLevels[i].GetInt("StoredUses");
                 int newCooldown = effectPerLevels[i].GetInt("Cooldown");
                 if (newStoredUses != storedUses[storedUses.Count - 1] || newCooldown != cooldowns[cooldowns.Count - 1]) {
@@ -232,7 +232,7 @@ internal class GrantedEffects {
             //InterpolationBases - does not change
             //StatInterpolations - changes size
 
-            int baseLevelReq = levels[0].GetInt("PlayerLevelReq"); //Do we need this for anything? I guess interpolation 2
+            int baseLevelReq = (int)levels[0].GetFloat("PlayerLevelReq"); //Do we need this for anything? I guess interpolation 2
 
             List<int> spellCritLevels = new List<int>() { baseLevelReq };
             List<int> spellCritValues = new List<int>() { levels[0].GetInt("SpellCritChance") };
@@ -274,7 +274,7 @@ internal class GrantedEffects {
 
             //string test = "BaseMultiplier";
             for (int i = 1; i < levels.Count; i++) {
-                int level = levels[i].GetInt("PlayerLevelReq");
+                int level = (int)levels[i].GetFloat("PlayerLevelReq");
 
                 int newCrit = levels[i].GetInt("SpellCritChance");
                 if (newCrit != spellCritValues[spellCritValues.Count - 1]) {
