@@ -6,6 +6,7 @@ using System.Text;
 using Archbestiary.Util;
 using PoeFormats;
 using System.Data;
+using Microsoft.VisualBasic.FileIO;
 
 public class Bestiary {
     Dictionary<string, HashSet<string>> areaMonsters = new Dictionary<string, HashSet<string>>();
@@ -47,13 +48,13 @@ public class Bestiary {
     public Bestiary(string path = @"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT\", string schema = null) {
         if(schema == null) 
             for(int i = 100; i > 0; i--) 
-                if(File.Exists($@"E:\Anna\Downloads\schema.min({i}).json")) {
-                    schema = $@"E:\Anna\Downloads\schema.min({i}).json";
+                if(File.Exists($@"E:\A\Downloads\schema.min({i}).json")) {
+                    schema = $@"E:\A\Downloads\schema.min({i}).json";
                     break;
                 }
         basePath = path;
         spec = DatSpecIndex.Create(schema);
-        dats = new DatFileIndex(new DiskDirectory(Path.Combine(path, "Data")), spec);
+        dats = new DatFileIndex(new DiskDirectory(Path.Combine(path, "data")), spec);
         grantedEffacts = new GrantedEffects(dats);
     }
 
@@ -74,8 +75,8 @@ public class Bestiary {
         int[] monsterCategories = GetMonsterCategories(bosses);
 
 
-        Dictionary<string, string> monsterAdded = History.BuildMonsterVarietyHistory(true);
-        //Dictionary<string, string> monsterAdded = new Dictionary<string, string>();
+        //Dictionary<string, string> monsterAdded = History.BuildMonsterVarietyHistory(true);
+        Dictionary<string, string> monsterAdded = new Dictionary<string, string>();
 
         StringBuilder html = new StringBuilder();
         html.AppendLine("<link rel=\"stylesheet\" href=\"index.css\"></link>");
@@ -108,7 +109,6 @@ public class Bestiary {
 
                 int lifeMult = monsterVariety["LifeMultiplier"].GetPrimitive<int>();
                 int damageMult = monsterVariety["DamageMultiplier"].GetPrimitive<int>();
-
                 int armourMult = monsterType["Armour"].GetPrimitive<int>();
                 int evasionMult = monsterType["Evasion"].GetPrimitive<int>();
                 int esMult = monsterType["EnergyShieldFromLife"].GetPrimitive<int>();
@@ -152,7 +152,7 @@ public class Bestiary {
 
         html.AppendLine("</table></details></div>");
         html.AppendLine("<div class=\"mt\"><iframe name=\"body\" src=\"Monsters/AtlasInvaders_BlackStarMonsters_BlackStarBoss.html\"></iframe></div></body>");
-        File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiary\web\index.html", html.ToString());
+        File.WriteAllText(@"E:\A\A\Visual Studio\Archbestiary\web\index.html", html.ToString());
     }
 
     public void CreateMonsterListNew() {
@@ -169,8 +169,8 @@ public class Bestiary {
 
         HashSet<int> mapMonsters = GetMapMonsters();
         int[] monsterCategories = GetMonsterCategories(bosses);
-        Dictionary<string, string> monsterAdded = History.BuildMonsterVarietyHistory(true);
-        //Dictionary<string, string> monsterAdded = new Dictionary<string, string>();
+        //Dictionary<string, string> monsterAdded = History.BuildMonsterVarietyHistory(true);
+        Dictionary<string, string> monsterAdded = new Dictionary<string, string>();
 
         StringBuilder html = new StringBuilder();
         html.AppendLine("<link rel=\"stylesheet\" href=\"index.css\"></link>");
@@ -308,7 +308,7 @@ public class Bestiary {
 
         html.AppendLine("</table></details></div>");
         html.AppendLine("<div class=\"mt\"><iframe name=\"body\" src=\"Monsters/AtlasInvaders_BlackStarMonsters_BlackStarBoss.html\"></iframe></div></body>");
-        File.WriteAllText(@"E:\Anna\Anna\Visual Studio\Archbestiary\web\index.html", html.ToString());
+        File.WriteAllText(@"E:\A\A\Visual Studio\Archbestiary\web\index.html", html.ToString());
     }
 
 
@@ -368,12 +368,12 @@ public class Bestiary {
             int armourMult = monsterType["Armour"].GetPrimitive<int>();
             int evasionMult = monsterType["Evasion"].GetPrimitive<int>();
             int esMult = monsterType["EnergyShieldFromLife"].GetPrimitive<int>();
-
+            int accuracyMult = monsterType.GetInt("Accuracy");
             int damageMult = monsterVariety["DamageMultiplier"].GetPrimitive<int>();
             int attackTime = monsterVariety["AttackSpeed"].GetPrimitive<int>();
             int damageSpread = monsterType["DamageSpread"].GetPrimitive<int>();
 
-            onUpdate.Add($"        SetStats(slider.value, {lifeMult}, {ailmentMult}, {armourMult}, {evasionMult}, {esMult}, {res});");
+            onUpdate.Add($"        SetStats(slider.value, {lifeMult}, {ailmentMult}, {armourMult}, {evasionMult}, {esMult}, {accuracyMult}, {res});");
             usedFunctions.Add("SetStats");
 
             string monsterID = monsterVariety["Id"].GetString();
@@ -432,7 +432,7 @@ public class Bestiary {
             //string aiText = File.ReadAllText(Path.Combine(basePath, monsterVariety.GetString("AISFile")));
             string aiText = "NO AI";
 
-            HTMLWriter html = new HTMLWriter(File.Open(@"E:\Anna\Anna\Visual Studio\Archbestiary\web\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", FileMode.Create));
+            HTMLWriter html = new HTMLWriter(File.Open(@"E:\A\A\Visual Studio\Archbestiary\web\Monsters\" + monsterID.TrimEnd('_').Replace('/', '_') + ".html", FileMode.Create));
             html.WriteLine("<link rel=\"stylesheet\" href=\"monster.css\"></link>");
 
             html.WriteTable(
@@ -458,7 +458,7 @@ public class Bestiary {
                             HTML.Row(HTML.Cell("Armour:", "cellPhys"), HTML.Cell("0", id: "arm"), HTML.Cell("Fire Resistance:", "cellFire"), HTML.Cell("0", id: "fire")),
                             HTML.Row(HTML.Cell("Evasion:", "cellDex"), HTML.Cell("0", id: "eva"), HTML.Cell("Cold Resistance:", "cellCold"), HTML.Cell("0", id: "cold")),
                             HTML.Row(HTML.Cell("Energy Shield:", "cellInt"), HTML.Cell("0", id: "es"), HTML.Cell("Lightning Resistance:", "cellLight"), HTML.Cell("0", id: "lightning")),
-                            HTML.Row("", "", HTML.Cell("Chaos Resistance:", "cellChaos"), HTML.Cell("0", id: "chaos")), //"Damage Mult:", damageMult
+                            HTML.Row(HTML.Cell("Accuracy:"), HTML.Cell("asdf", id: "accuracy"), HTML.Cell("Chaos Resistance:", "cellChaos"), HTML.Cell("0", id: "chaos")), //"Damage Mult:", damageMult
                             HTML.Row("Damage Mult:", damageMult, "Damage Spread", damageSpread) //"Damage Mult:", damageMult
 
                         ),

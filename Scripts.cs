@@ -5,10 +5,50 @@ using PoeFormats;
 using System;
 using System.Text;
 using System.IO;
-using ImageMagick;
 using ImageMagick.Formats;
 
 static class Scripts {
+
+    public static void ListLife(Bestiary b) {
+        foreach(DatRow row in b.dats["DefaultMonsterStats.dat64"]) {
+            string level = row.GetString("DisplayLevel");
+            int life1 = row.GetInt("Life");
+            int life2 = row.GetInt("UnkLife1");
+            int life3 = row.GetInt("UnkLife2");
+            Console.WriteLine($"{level}|{life1}|{life2}|{life3}");
+        }
+    }
+
+    public static void ListPacks(Bestiary b) {
+        Dictionary<string, List<string>> packs = new Dictionary<string, List<string>>();
+
+        foreach (DatRow row in b.dats["MonsterPacks.dat64"]) {
+            string packName = row["Id"].GetString();
+            packs[packName] = new List<string>();
+        }
+        foreach (DatRow row in b.dats["MonsterPackEntries.dat64"]) {
+            DatRow monster = row["MonsterVarietiesKey"].GetReference().GetReferencedRow();
+            DatRow pack = row["MonsterPacksKey"].GetReference().GetReferencedRow();
+            string packName = pack["Id"].GetString();
+            packs[packName].Add($"{monster["Name"].GetString()}@{monster["Id"]}");
+        }
+        foreach (DatRow row in b.dats["MonsterPacks.dat64"]) {
+            string packName = row["Id"].GetString();
+            foreach (DatReference monsterRef in row["BossMonster_MonsterVarietiesKeys"].GetReferenceArray()) {
+                DatRow monster = monsterRef.GetReferencedRow();
+                packs[packName].Add($"{monster["Name"].GetString()}@{monster["Id"]}");
+            }
+        }
+
+
+        foreach (string pack in packs.Keys) {
+            foreach (string monster in packs[pack]) {
+                Console.WriteLine(pack + "@" + monster);
+            }
+            Console.WriteLine();
+        }
+    }
+
 
     public static void FindGrantedEffectsWithoutAnimation(Bestiary b, string activeSkill) {
         foreach (DatRow monster in b.dats["MonsterVarieties.dat64"]) {
@@ -566,7 +606,7 @@ static class Scripts {
     }
 
     public static void ListMonsterRigsNew(Bestiary b) {
-        var history = History.BuildMonsterVarietyHistory();
+        //var history = History.BuildMonsterVarietyHistory();
 
         for (int i = 0; i < b.dats["MonsterVarieties.dat64"].RowCount; i++) {
             DatRow monster = b.dats["MonsterVarieties.dat64"][i];
@@ -575,12 +615,12 @@ static class Scripts {
             bool summoned = monsterType.GetReferencedRow()["IsSummoned"].GetPrimitive<bool>();
             string monsterId = monster["Id"].GetString().TrimEnd('_');
             string monsterName = monster["Name"].GetString();
-            string version = history.ContainsKey(monsterId) ? history[monsterId] : "unk";
+            //string version = history.ContainsKey(monsterId) ? history[monsterId] : "unk";
 
 
             foreach (string ao in monster["AOFiles"].GetStringArray()) {
-                string rig = Bestiary.GetRigFromAO(@"F:\Extracted\PathOfExile\3.20.Sanctum\ROOT", ao);
-                Console.WriteLine($"{version}@{monsterType.RowIndex}@{summoned}@{monsterTypeId}@{i}@{monsterId}@{monsterName}@{ao}@{rig}");
+                string rig = Bestiary.GetRigFromAO(@"F:\Extracted\PathOfExile\3.23.Affliction", ao);
+                Console.WriteLine($"{monsterType.RowIndex}@{summoned}@{monsterTypeId}@{i}@{monsterId}@{monsterName}@{ao}@{rig}");
                 break;
             }
         }
@@ -843,8 +883,14 @@ static class Scripts {
         Console.Write("];\n    const evasiveEvasionPerLevel = [");
         for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
             DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
-            Console.Write(row["UnkEvasion"].GetPrimitive<int>().ToString() + ",");
+            Console.Write(row["EvasiveEvasion"].GetPrimitive<int>().ToString() + ",");
         }
+        Console.Write("];\n    const accuracyPerLevel = [");
+        for (int i = 0; i < b.dats["DefaultMonsterStats.dat64"].RowCount; i++) {
+            DatRow row = b.dats["DefaultMonsterStats.dat64"][i];
+            Console.Write(row.GetInt("Accuracy").ToString() + ",");
+        }
+
 
         Console.Write("];\n    const fireRes = [[");
         for (int i = 0; i < b.dats["MonsterResistances.dat64"].RowCount; i++) {

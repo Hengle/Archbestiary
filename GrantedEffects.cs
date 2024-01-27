@@ -43,6 +43,7 @@ internal class GrantedEffects {
         {"spark", "SpellProjectileLightning"},
         {"spell_nova", "SpellAreaOfEffect"},
         {"viper_strike", "Melee"},
+        {"statue_spear_throw", "Throw" }
     };
 
     public GrantedEffects(DatFileIndex dats) {
@@ -190,11 +191,16 @@ internal class GrantedEffects {
                 //    w.AppendLine($"<tr><td>{skillName} ({skillId}) - {damageType}</td></tr>");
                 //else
                 w.AppendLine($"<tr><td>{skillName} ({skillId})</td></tr>");
+                try {
                 foreach (DatReference contextFlag in activeSkill["VirtualStatContextFlags"].GetReferenceArray()) {
                     if (contextFlag.RowIndex == 2) isAttack = true;
                     else if (contextFlag.RowIndex == 18) isHit = true;
 
                 }
+
+                } catch {
+                Console.WriteLine(skillName);
+            }
 
             }
 

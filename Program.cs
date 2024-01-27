@@ -9,10 +9,15 @@ class Program {
 
         //Scripts.CreateMonsterIdleAnimations(); return;
 
-        Bestiary b = new Bestiary(@"E:\Extracted\PathOfExile\3.21.Crucible");
+        Bestiary b = new Bestiary(@"F:\Extracted\PathOfExile\3.23.Affliction");
+        b.CreateMonsterPages(); return;
+        Scripts.MonsterBaseStats(b); return;
+        Scripts.ListLife(b); return;
+        Scripts.ListPacks(b); return;
+        //b.CreateMonsterListNew(); return;
         //Scripts.FindGrantedEffectsWithoutAnimation(b, "glacial_cascade"); return;
         //Scripts.ActiveSkillCounts(b); return;
-        b.CreateMonsterPages(); return;
+        b.CreateMonsterListNew(); return;
         Scripts.PrintMonsterRenderingInfo(b);
         return;
 
