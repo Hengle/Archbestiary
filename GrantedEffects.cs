@@ -2,9 +2,7 @@
 using PoeSharp.Filetypes.Dat;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 internal class GrantedEffects {
     DatFileIndex dats;
@@ -101,12 +99,12 @@ internal class GrantedEffects {
     }
 
 
-    public string CreateGrantedEffectTables(DatRow monsterVariety, List<string> onUpdate, HashSet<string> usedFunctions, int damageMult, int damageSpread) {
+    public string CreateGrantedEffectTables(DatRow monsterVariety, List<string> onUpdate, HashSet<string> usedFunctions, int damageMult, int damageSpread, bool debug) {
         DatReference[] refs = monsterVariety.GetRefArray("GrantedEffectsKeys");
         if (refs is null) return "";
         StringBuilder effectTables = new StringBuilder();
         for (int i = 0; i < refs.Length; i++) {
-            effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex, onUpdate, usedFunctions, damageMult, damageSpread));
+            effectTables.AppendLine(CreateGrantedEffectHtml(refs[i].GetReferencedRow(), refs[i].RowIndex, onUpdate, usedFunctions, damageMult, damageSpread, debug));
         }
         return effectTables.ToString();
     }
@@ -183,7 +181,7 @@ internal class GrantedEffects {
             bool isHit = false;
             //ActiveSkill
             {
-                if (debug) w.AppendLine(HTML.Row(HTML.Cell("ActiveSkill", "cellFire")));
+                //if (debug) w.AppendLine(HTML.Row(HTML.Cell("ActiveSkill", "cellFire")));
                 int skillId = rSkill.RowIndex;
                 string skillName = activeSkill.GetID();
                 //string damageType = GetSkillDamageTypes(activeSkill);
@@ -208,7 +206,7 @@ internal class GrantedEffects {
             //GrantedEffectStatSets
 
 
-            if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSet", "cellFire")));
+            //if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSet", "cellFire")));
             DatRow statSet = grantedEffect["StatSet"].GetReference().GetReferencedRow();
             float baseEffectiveness = statSet["BaseEffectiveness"].GetPrimitive<float>();
             float incrementalEffectiveness = statSet["IncrementalEffectiveness"].GetPrimitive<float>();
@@ -230,7 +228,7 @@ internal class GrantedEffects {
             //GrantedEffectsPerLevel
 
 
-            if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectsPerLevel", "cellFire")));
+            //if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectsPerLevel", "cellFire")));
 
             var effectPerLevels = grantedEffectPerLevels[row];
 
@@ -254,7 +252,7 @@ internal class GrantedEffects {
             }
         //GrantedEffectStatSetsPerLevel
         {
-            if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSetsPerLevel", "cellFire")));
+            //if (debug) w.AppendLine(HTML.Row(HTML.Cell("GrantedEffectStatSetsPerLevel", "cellFire")));
 
             int statSetIndex = grantedEffect["StatSet"].GetReference().RowIndex;
             var levels = grantedStatSetPerLevels[statSetIndex];
@@ -389,15 +387,23 @@ internal class GrantedEffects {
                 }
             }
 
+
+            //formatting as %
+            float[] formattedBaseMultiplierValues = new float[baseMultiplierValues.Count];
+            for (int multiplierLevel = 0; multiplierLevel < formattedBaseMultiplierValues.Length; multiplierLevel++) {
+                formattedBaseMultiplierValues[multiplierLevel] = ((float)(baseMultiplierValues[multiplierLevel] / 10)) / 10 + 100;
+            }
+
             //Attack Mult
             if (isAttack) {
                 if (baseMultiplierValues.Count > 1) {
                     w.AppendLine(HTML.Row(HTML.Cell("C", "statDamage", $"{row}_m")));
                     //TODO FORMAT LEVELED ATTACK MULT
-                    onUpdate.Add(@$"		SetIntStat(""{row}_m"", slider.value, ""<span class=\""statTag\"">Attack Damage:</span> "", {HTML.JSArray(baseMultiplierLevels.ToArray())}, {HTML.JSArray(baseMultiplierValues.ToArray())});");
+                    onUpdate.Add(@$"		SetIntStat(""{row}_m"", slider.value, ""<span class=\""statTag\"">Attack Damage:</span> "", {HTML.JSArray(baseMultiplierLevels.ToArray())}, {HTML.JSArray(formattedBaseMultiplierValues.ToArray())});");
+                    Console.WriteLine(grantedEffect.GetID() + " " + row.ToString() + onUpdate[onUpdate.Count - 1]);
                     usedFunctions.Add("SetIntStat");
                 } else {
-                    w.AppendLine(HTML.Row(HTML.Cell($"<span class=\"statTag\">Attack Damage:</span> {((float)(baseMultiplierValues[0] / 10)) / 10 + 100}% of Base")));
+                    w.AppendLine(HTML.Row(HTML.Cell($"<span class=\"statTag\">Attack Damage:</span> {formattedBaseMultiplierValues[0]}% of Base")));
                 }
             }
 

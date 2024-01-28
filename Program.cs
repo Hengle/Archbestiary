@@ -10,7 +10,7 @@ class Program {
         //Scripts.CreateMonsterIdleAnimations(); return;
 
         Bestiary b = new Bestiary(@"F:\Extracted\PathOfExile\3.23.Affliction");
-        b.CreateMonsterPages(); return;
+        b.CreateMonsterPages(true); return;
         Scripts.MonsterBaseStats(b); return;
         Scripts.ListLife(b); return;
         Scripts.ListPacks(b); return;

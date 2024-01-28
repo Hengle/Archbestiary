@@ -312,7 +312,7 @@ public class Bestiary {
     }
 
 
-    public void CreateMonsterPages() {
+    public void CreateMonsterPages(bool debug = false) {
 
         Dictionary<string, string> astAnimations = new Dictionary<string, string>();
 
@@ -370,6 +370,7 @@ public class Bestiary {
             int esMult = monsterType["EnergyShieldFromLife"].GetPrimitive<int>();
             int accuracyMult = monsterType.GetInt("Accuracy");
             int damageMult = monsterVariety["DamageMultiplier"].GetPrimitive<int>();
+            bool baseDamageIgnoresAttackSpeed = monsterType.GetBool("BaseDamageIgnoresAttackSpeed");
             int attackTime = monsterVariety["AttackSpeed"].GetPrimitive<int>();
             int damageSpread = monsterType["DamageSpread"].GetPrimitive<int>();
 
@@ -459,11 +460,11 @@ public class Bestiary {
                             HTML.Row(HTML.Cell("Evasion:", "cellDex"), HTML.Cell("0", id: "eva"), HTML.Cell("Cold Resistance:", "cellCold"), HTML.Cell("0", id: "cold")),
                             HTML.Row(HTML.Cell("Energy Shield:", "cellInt"), HTML.Cell("0", id: "es"), HTML.Cell("Lightning Resistance:", "cellLight"), HTML.Cell("0", id: "lightning")),
                             HTML.Row(HTML.Cell("Accuracy:"), HTML.Cell("asdf", id: "accuracy"), HTML.Cell("Chaos Resistance:", "cellChaos"), HTML.Cell("0", id: "chaos")), //"Damage Mult:", damageMult
-                            HTML.Row("Damage Mult:", damageMult, "Damage Spread", damageSpread) //"Damage Mult:", damageMult
-
+                            HTML.Row("Damage Mult:", damageMult, "Damage Spread", damageSpread), //"Damage Mult:", damageMult
+                            debug ? HTML.Row("Attack Time:", attackTime, "Damage Ignores Speed:", baseDamageIgnoresAttackSpeed.ToString()) : null 
                         ),
                         HTML.Break(),
-                        grantedEffacts.CreateGrantedEffectTables(monsterVariety, onUpdate, usedFunctions, damageMult, damageSpread)
+                        grantedEffacts.CreateGrantedEffectTables(monsterVariety, onUpdate, usedFunctions, damageMult, damageSpread, debug)
                     ),
                     HTML.Array(
 

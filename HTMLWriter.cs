@@ -51,7 +51,9 @@ namespace Archbestiary.Util {
             if (rows is null || rows.Length == 0) return null;
             StringBuilder b = new StringBuilder();
             b.AppendLine($"<table class=\"{hClass}\">");
-            for (int i = 0; i < rows.Length; i++) b.AppendLine(rows[i].ToString());
+            for (int i = 0; i < rows.Length; i++) 
+                if (rows[i] is not null)
+                    b.AppendLine(rows[i].ToString());
             b.AppendLine("</table>");
             return b.ToString();
         }
